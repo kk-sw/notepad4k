@@ -299,6 +299,7 @@
     <File Name="../../src/Edit.cpp"/>
     <File Name="../../src/EditAutoC.cpp"/>
     <File Name="../../src/EditEncoding.cpp"/>
+    <File Name="../../src/EditSpellCheck.cpp"/>
     <File Name="../../src/Helpers.cpp"/>
     <File Name="../../src/Notepad4.cpp"/>
     <File Name="../../src/Styles.cpp"/>

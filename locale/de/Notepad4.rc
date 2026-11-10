@@ -490,6 +490,12 @@ BEGIN
 			MENUITEM "Zoom zu&rücksetzen\tStrg+^",		IDM_VIEW_RESETZOOM
 		END
 		MENUITEM "&Vollbild umschalten\tF11 [Esc]",		IDM_VIEW_TOGGLE_FULLSCREEN
+		MENUITEM SEPARATOR
+		MENUITEM "&Rechtschreibprüfung",						IDM_VIEW_SPELLCHECK
+		POPUP "Sprache der Rechtschreibprüfung"
+		BEGIN
+			MENUITEM "Standard",								IDM_SPELL_LANG_FIRST
+		END
 	END
 	POPUP "Sche&ma"
 	BEGIN
@@ -1798,6 +1804,16 @@ END
 
 STRINGTABLE
 BEGIN
+    IDS_SPELL_ADD_TO_DICT   "Zum Wörterbuch hinzufügen"
+    IDS_SPELL_IGNORE_ALL    "Alle ignorieren"
+    IDS_SPELL_DELETE_REPEATED "Wiederholtes Wort löschen"
+    IDS_SPELL_NO_SUGGESTIONS "(Keine Vorschläge)"
+    IDS_SPELL_CHECK_SELECTION "Auswahl auf Rechtschreibung prüfen"
+    IDS_SPELL_SELECTION_RESULT "Rechtschreibfehler in der Auswahl: %d"
+END
+
+STRINGTABLE
+BEGIN
     IDT_FILE_NEW            "Neu"
     IDT_FILE_OPEN           "Öffnen"
     IDT_FILE_BROWSE         "Durchsuchen"
@@ -1825,6 +1841,10 @@ BEGIN
     IDT_FILE_LAUNCH         "Dokument ausführen"
     IDT_VIEW_ALWAYSONTOP    "Immer im Vordergrund"
     IDT_FILE_NEWWINDOW      "Neues Fenster"
+    IDT_EDIT_CODE_PRETTY    "CSS/JS/JSON formatieren"
+    IDT_VIEW_SPELLCHECK     "Rechtschreibprüfung"
+    IDT_VIEW_RESETZOOM      "Zoom zurücksetzen"
+    IDT_EDIT_LINECOMMENT    "Zeilenkommentar umschalten"
 END
 
 STRINGTABLE

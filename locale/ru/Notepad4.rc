@@ -491,6 +491,12 @@ BEGIN
 			MENUITEM "&Сбросить масштаб\tCtrl+\\",							IDM_VIEW_RESETZOOM
 		END
 		MENUITEM "Во &весь экран\tF11 [Esc]",								IDM_VIEW_TOGGLE_FULLSCREEN
+		MENUITEM SEPARATOR
+		MENUITEM "Проверка &орфографии",									IDM_VIEW_SPELLCHECK
+		POPUP "&Язык проверки орфографии"
+		BEGIN
+			MENUITEM "По умолчанию",								IDM_SPELL_LANG_FIRST
+		END
 	END
 	POPUP "Схе&ма"
 	BEGIN
@@ -1799,6 +1805,16 @@ END
 
 STRINGTABLE
 BEGIN
+    IDS_SPELL_ADD_TO_DICT   "Добавить в словарь"
+    IDS_SPELL_IGNORE_ALL    "Пропустить все"
+    IDS_SPELL_DELETE_REPEATED "Удалить повторяющееся слово"
+    IDS_SPELL_NO_SUGGESTIONS "(Нет вариантов)"
+    IDS_SPELL_CHECK_SELECTION "Проверить орфографию выделенного"
+    IDS_SPELL_SELECTION_RESULT "Орфографических ошибок в выделенном: %d"
+END
+
+STRINGTABLE
+BEGIN
     IDT_FILE_NEW            "Создать"
     IDT_FILE_OPEN           "Открыть"
     IDT_FILE_BROWSE         "Обзор"
@@ -1826,6 +1842,10 @@ BEGIN
     IDT_FILE_LAUNCH         "Открыть документ"
     IDT_VIEW_ALWAYSONTOP    "Поверх всех окон"
     IDT_FILE_NEWWINDOW      "Новое окно"
+    IDT_EDIT_CODE_PRETTY    "Форматировать CSS/JS/JSON"
+    IDT_VIEW_SPELLCHECK     "Проверка орфографии"
+    IDT_VIEW_RESETZOOM      "Сбросить масштаб"
+    IDT_EDIT_LINECOMMENT    "Вкл./выкл. комментирование строки"
 END
 
 STRINGTABLE

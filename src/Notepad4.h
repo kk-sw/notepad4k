@@ -130,6 +130,7 @@ enum {
 #define ID_WATCHTIMER				0xA000	// file watch timer
 #define ID_PASTEBOARDTIMER			0xA001	// paste board timer
 #define ID_AUTOSAVETIMER			0xA002	// AutoSave timer
+#define ID_SPELLCHECKTIMER			0xA003	// spell check timer
 
 enum EscFunction {
 	EscFunction_None = 0,

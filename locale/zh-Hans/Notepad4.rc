@@ -490,6 +490,12 @@ BEGIN
 			MENUITEM "重置缩放(&R)\tCtrl+\\",		IDM_VIEW_RESETZOOM
 		END
 		MENUITEM "切换全屏(&S)\tF11 [Esc]",			IDM_VIEW_TOGGLE_FULLSCREEN
+		MENUITEM SEPARATOR
+		MENUITEM "拼写检查",					IDM_VIEW_SPELLCHECK
+		POPUP "拼写检查语言"
+		BEGIN
+			MENUITEM "默认",						IDM_SPELL_LANG_FIRST
+		END
 	END
 	POPUP "语法高亮(&M)"
 	BEGIN
@@ -1798,6 +1804,16 @@ END
 
 STRINGTABLE
 BEGIN
+    IDS_SPELL_ADD_TO_DICT   "添加到词典"
+    IDS_SPELL_IGNORE_ALL    "全部忽略"
+    IDS_SPELL_DELETE_REPEATED "删除重复的单词"
+    IDS_SPELL_NO_SUGGESTIONS "(无建议)"
+    IDS_SPELL_CHECK_SELECTION "检查所选内容的拼写"
+    IDS_SPELL_SELECTION_RESULT "所选内容中的拼写错误: %d"
+END
+
+STRINGTABLE
+BEGIN
     IDT_FILE_NEW            "新建"
     IDT_FILE_OPEN           "打开"
     IDT_FILE_BROWSE         "浏览"
@@ -1825,6 +1841,10 @@ BEGIN
     IDT_FILE_LAUNCH         "运行文件"
     IDT_VIEW_ALWAYSONTOP    "始终置顶"
     IDT_FILE_NEWWINDOW      "新建窗口"
+    IDT_EDIT_CODE_PRETTY    "CSS/JS/JSON 美化"
+    IDT_VIEW_SPELLCHECK     "拼写检查"
+    IDT_VIEW_RESETZOOM      "重置缩放"
+    IDT_EDIT_LINECOMMENT    "切换行注释"
 END
 
 STRINGTABLE

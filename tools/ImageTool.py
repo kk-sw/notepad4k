@@ -265,6 +265,10 @@ def make_notepad4_toolbar_bitmap(size):
 		f'{images}/Launch.png',			# IDT_FILE_LAUNCH
 		f'{images}/AlwaysOnTop.png',	# IDT_VIEW_ALWAYSONTOP
 		f'{images}/NewWindow.png',		# IDT_FILE_NEWWINDOW
+		f'{images}/CodePretty.png',		# IDT_EDIT_CODE_PRETTY
+		f'{images}/SpellCheck.png',		# IDT_VIEW_SPELLCHECK
+		f'{images}/ResetZoom.png',		# IDT_VIEW_RESETZOOM
+		f'{images}/LineComment.png',	# IDT_EDIT_LINECOMMENT
 	], f'Toolbar{size}.bmp')
 
 def make_all_notepad4_toolbar_bitmap():

@@ -68,7 +68,7 @@ static HICON hTrayIcon = nullptr;
 static UINT uTrayIconDPI = 0;
 
 #define TOOLBAR_COMMAND_BASE	IDT_FILE_NEW
-#define DefaultToolbarButtons	L"22 3 0 1 27 2 0 4 18 19 0 5 6 0 7 8 9 20 0 10 11 0 12 0 24 0 13 14 0 15 16 0 17"
+#define DefaultToolbarButtons	L"22 3 0 1 27 2 0 4 18 19 0 10 11 0 12 0 24 0 13 14 30 0 28 0 31 0 29"
 // NOLINTBEGIN(readability-redundant-zero-initializer)
 #if NP2_ENABLE_CUSTOMIZE_TOOLBAR_LABELS
 static TBBUTTON tbbMainWnd[] =
@@ -104,6 +104,10 @@ static const TBBUTTON tbbMainWnd[] =
 	{24, 	IDT_FILE_LAUNCH, 	TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, 0},
 	{25, 	IDT_VIEW_ALWAYSONTOP, 	TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, 0},
 	{26, 	IDT_FILE_NEWWINDOW, 	TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, 0},
+	{27, 	IDT_EDIT_CODE_PRETTY, 	TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, 0},
+	{28, 	IDT_VIEW_SPELLCHECK, 	TBSTATE_ENABLED, BTNS_DROPDOWN, {0}, 0, 0},
+	{29, 	IDT_VIEW_RESETZOOM, 	TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, 0},
+	{30, 	IDT_EDIT_LINECOMMENT, 	TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, 0},
 };
 // NOLINTEND(readability-redundant-zero-initializer)
 
@@ -430,6 +434,7 @@ static void CleanUpResources(bool initialized) noexcept {
 	Encoding_ReleaseResources();
 	Style_ReleaseResources();
 	Edit_ReleaseResources();
+	EditSpellCheckReleaseResources();
 	Scintilla_ReleaseResources();
 	DarkMode_Cleanup();
 
@@ -1218,6 +1223,8 @@ LRESULT CALLBACK MainWndProc(HWND hwnd, UINT umsg, WPARAM wParam, LPARAM lParam)
 	case WM_TIMER:
 		if (wParam == ID_AUTOSAVETIMER) {
 			AutoSave_DoWork(FileSaveFlag_Default);
+		} else if (wParam == ID_SPELLCHECKTIMER) {
+			EditSpellCheckOnTimer();
 		}
 		break;
 
@@ -1364,17 +1371,21 @@ LRESULT CALLBACK MainWndProc(HWND hwnd, UINT umsg, WPARAM wParam, LPARAM lParam)
 		POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
 
 		int imenu = 0;
+		Sci_Position iSpellCheckPos = -1;
 		switch (nID) {
 		case IDC_EDIT: {
-			if (SciCall_IsSelectionEmpty() && pt.x != -1 && pt.y != -1) {
+			if (pt.x != -1 && pt.y != -1) {
 				POINT ptc = pt;
 				ScreenToClient(hwndEdit, &ptc);
-				const Sci_Position iNewPos = SciCall_PositionFromPoint(ptc.x, ptc.y);
-				SciCall_GotoPos(iNewPos);
+				iSpellCheckPos = SciCall_PositionFromPointClose(ptc.x, ptc.y);
+				if (SciCall_IsSelectionEmpty()) {
+					SciCall_GotoPos(SciCall_PositionFromPoint(ptc.x, ptc.y));
+				}
 			}
 
 			if (pt.x == -1 && pt.y == -1) {
 				const Sci_Position iCurrentPos = SciCall_GetCurrentPos();
+				iSpellCheckPos = iCurrentPos;
 				pt.x = SciCall_PointXFromPosition(iCurrentPos);
 				pt.y = SciCall_PointYFromPosition(iCurrentPos);
 				ClientToScreen(hwndEdit, &pt);
@@ -1393,8 +1404,11 @@ LRESULT CALLBACK MainWndProc(HWND hwnd, UINT umsg, WPARAM wParam, LPARAM lParam)
 			break;
 		}
 
-		TrackPopupMenuEx(GetSubMenu(hmenu, imenu),
-						 TPM_LEFTBUTTON | TPM_RIGHTBUTTON, pt.x + 1, pt.y + 1, hwnd, nullptr);
+		HMENU subMenu = GetSubMenu(hmenu, imenu);
+		if (imenu == IDP_POPUP_SUBMENU_EDIT) {
+			EditSpellCheckContextMenu(subMenu, iSpellCheckPos, dwCurrentDocReversion);
+		}
+		TrackPopupMenuEx(subMenu, TPM_LEFTBUTTON | TPM_RIGHTBUTTON, pt.x + 1, pt.y + 1, hwnd, nullptr);
 
 		DestroyMenu(hmenu);
 	}
@@ -2139,6 +2153,7 @@ void MsgSize(HWND hwnd, WPARAM wParam, LPARAM lParam) noexcept {
 
 	// resize Statusbar items
 	UpdateStatusbar();
+	EditSpellCheckSchedule();
 }
 
 void UpdateStatusBarCache(int item) noexcept {
@@ -2564,6 +2579,7 @@ void MsgInitMenu(HWND hwnd, WPARAM wParam, LPARAM lParam) noexcept {
 	CheckCmd(hmenu, IDM_VIEW_FULLSCREEN_HIDE_TITLE, iFullScreenMode & FullScreenMode_HideCaption);
 
 	CheckCmd(hmenu, IDM_VIEW_MATCHBRACES, bMatchBraces);
+	EditSpellCheckInitMenu(hmenu);
 	CheckCmd(hmenu, IDM_VIEW_HIGHLIGHTCURRENT_BLOCK, bHighlightCurrentBlock);
 	i = IDM_VIEW_HIGHLIGHTCURRENTLINE_NONE + static_cast<int>(iHighlightCurrentLine);
 	CheckMenuRadioItem(hmenu, IDM_VIEW_HIGHLIGHTCURRENTLINE_NONE, IDM_VIEW_HIGHLIGHTCURRENTLINE_FRAME, i, MF_BYCOMMAND);
@@ -3547,6 +3563,7 @@ LRESULT MsgCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
 	break;
 
 	case IDM_EDIT_LINECOMMENT:
+	case IDT_EDIT_LINECOMMENT:
 		EditToggleCommentLine(false);
 		break;
 
@@ -3576,8 +3593,9 @@ LRESULT MsgCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
 	case IDM_EDIT_COPYRTF:
 	case IDM_EDIT_CODE_COMPRESS:
 	case IDM_EDIT_CODE_PRETTY:
+	case IDT_EDIT_CODE_PRETTY:
 		BeginWaitCursor();
-		EditFormatCode(LOWORD(wParam));
+		EditFormatCode((LOWORD(wParam) == IDT_EDIT_CODE_PRETTY) ? IDM_EDIT_CODE_PRETTY : LOWORD(wParam));
 		EndWaitCursor();
 		break;
 
@@ -4025,6 +4043,12 @@ LRESULT MsgCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
 		}
 		break;
 
+	case IDM_VIEW_SPELLCHECK:
+	case IDT_VIEW_SPELLCHECK:
+		EditSpellCheckToggle();
+		UpdateToolbar();
+		break;
+
 	case IDM_VIEW_HIGHLIGHTCURRENT_BLOCK:
 		bHighlightCurrentBlock = !bHighlightCurrentBlock;
 		SciCall_MarkerEnableHighlight(bHighlightCurrentBlock);
@@ -4057,6 +4081,7 @@ LRESULT MsgCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
 		break;
 
 	case IDM_VIEW_RESETZOOM:
+	case IDT_VIEW_RESETZOOM:
 		SciCall_SetZoom(100);
 		break;
 
@@ -4597,6 +4622,9 @@ LRESULT MsgCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
 			Style_SetLexerByLangIndex(LOWORD(wParam));
 			break;
 		}
+		if (EditSpellCheckCommand(LOWORD(wParam), dwCurrentDocReversion)) {
+			break;
+		}
 
 		const UINT index = LOWORD(wParam) - IDM_RECENT_HISTORY_START;
 		if (index < MRU_MAXITEMS) {
@@ -4633,6 +4661,7 @@ LRESULT MsgNotify(HWND hwnd, WPARAM wParam, LPARAM lParam) {
 		switch (pnmh->code) {
 		case SCN_UPDATEUI: {
 			const unsigned updated = scn->updated;
+			EditSpellCheckUpdateUI(updated);
 			if (updated & ~(SC_UPDATE_V_SCROLL | SC_UPDATE_H_SCROLL)) {
 				UpdateToolbar();
 				if (updated & SC_UPDATE_LINE_COUNT) {
@@ -4851,6 +4880,7 @@ LRESULT MsgNotify(HWND hwnd, WPARAM wParam, LPARAM lParam) {
 
 		case SCN_ZOOM:
 			MsgNotifyZoom();
+			EditSpellCheckSchedule();
 			break;
 
 		case SCN_SAVEPOINTREACHED:
@@ -4888,10 +4918,15 @@ LRESULT MsgNotify(HWND hwnd, WPARAM wParam, LPARAM lParam) {
 
 		case SCN_CODEPAGECHANGED:
 			EditOnCodePageChanged(scn->oldCodePage, bShowUnicodeControlCharacter, efrData);
+			EditSpellCheckSchedule();
 			break;
 
-		case SCN_HOTSPOTCLICK:
 		case SCN_INDICATORCLICK:
+			if ((SciCall_IndicatorAllOnFor(scn->position) & ~(1 << IndicatorNumber_SpellCheck)) == 0) {
+				break;
+			}
+			[[fallthrough]];
+		case SCN_HOTSPOTCLICK:
 			if ((scn->modifiers & SCMOD_CTRL)) {
 				// disable multiple selection to avoid two carets after Ctrl + click
 				SciCall_SetMultipleSelection(false);
@@ -4965,6 +5000,11 @@ LRESULT MsgNotify(HWND hwnd, WPARAM wParam, LPARAM lParam) {
 					mii.dwTypeData = const_cast<LPWSTR>(path);
 					mii.hbmpItem = hbmp;
 					InsertMenuItem(subMenu, i, TRUE, &mii);
+				}
+			} else if (lpTbNotify->iItem == IDT_VIEW_SPELLCHECK) {
+				hmenu = subMenu = EditSpellCheckCreateLanguageMenu();
+				if (hmenu == nullptr) {
+					return TBDDRET_NODEFAULT;
 				}
 			} else {
 				hmenu = LoadMenu(g_hInstance, MAKEINTRESOURCE(IDR_POPUPMENU));
@@ -5145,6 +5185,8 @@ void LoadSettings() noexcept {
 	bShowUnicodeControlCharacter = section.GetBool(L"ShowUnicodeControlCharacter", false);
 
 	bMatchBraces = section.GetBool(L"MatchBraces", true);
+	spellCheckConfig.bEnabled = section.GetBool(L"SpellCheck", false);
+	section.GetString(L"SpellCheckLanguage", L"", spellCheckConfig.wszLanguage);
 	bHighlightCurrentBlock = section.GetBool(L"HighlightCurrentBlock", true);
 	iValue = section.GetInt(L"HighlightCurrentLine", 10 + LineHighlightMode_OutlineFrame);
 	bHighlightCurrentSubLine = (iValue >= 10);
@@ -5447,6 +5489,8 @@ void SaveSettings(bool bSaveSettingsNow) noexcept {
 	section.SetBoolEx(L"WordWrapSelectSubLine", bWordWrapSelectSubLine, false);
 	section.SetBoolEx(L"ShowUnicodeControlCharacter", bShowUnicodeControlCharacter, false);
 	section.SetBoolEx(L"MatchBraces", bMatchBraces, true);
+	section.SetBoolEx(L"SpellCheck", spellCheckConfig.bEnabled, false);
+	section.SetStringEx(L"SpellCheckLanguage", spellCheckConfig.wszLanguage, L"");
 	section.SetBoolEx(L"HighlightCurrentBlock", bHighlightCurrentBlock, true);
 	iValue = static_cast<int>(iHighlightCurrentLine) + (static_cast<int>(bHighlightCurrentSubLine)*10);
 	section.SetIntEx(L"HighlightCurrentLine", iValue, 10 + LineHighlightMode_OutlineFrame);
@@ -6422,9 +6466,14 @@ void UpdateToolbar() noexcept {
 	EnableTool(IDT_EDIT_FIND, nonEmpty);
 	EnableTool(IDT_EDIT_REPLACE, nonEmpty);
 	EnableTool(IDT_EDIT_DELETE, nonEmpty);
+	EnableTool(IDT_EDIT_CODE_PRETTY, nonEmpty && (pLexCurrent->lexerAttr & LexerAttr_CodePretty));
+	EnableTool(IDT_EDIT_LINECOMMENT, !(pLexCurrent->lexerAttr & LexerAttr_NoLineComment));
 
 	CheckTool(IDT_VIEW_WORDWRAP, fvCurFile.fWordWrap);
 	CheckTool(IDT_VIEW_ALWAYSONTOP, IsTopMost());
+	const bool spellCheckUsable = EditSpellCheckIsUsable();
+	EnableTool(IDT_VIEW_SPELLCHECK, spellCheckUsable);
+	CheckTool(IDT_VIEW_SPELLCHECK, spellCheckUsable && spellCheckConfig.bEnabled);
 }
 
 //=============================================================================

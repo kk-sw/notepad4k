@@ -1594,6 +1594,8 @@ void Style_SetLexer(PEDITLEXER pLexNew, BOOL bLexerChanged) noexcept {
 	Style_SetDefaultStyle(GlobalStyleIndex_LineNumber);
 	Style_DefineIndicator(GlobalStyleIndex_MatchBrace, IndicatorNumber_MatchBrace, INDIC_ROUNDBOX);
 	Style_DefineIndicator(GlobalStyleIndex_MatchBraceError, IndicatorNumber_MatchBraceError, INDIC_ROUNDBOX);
+	SciCall_IndicSetStyle(IndicatorNumber_SpellCheck, INDIC_SQUIGGLEPIXMAP);
+	SciCall_IndicSetFore(IndicatorNumber_SpellCheck, RGB(0xFF, 0x00, 0x00));
 	Style_SetDefaultStyle(GlobalStyleIndex_IndentationGuide);
 
 	//! begin Selection
@@ -1869,12 +1871,14 @@ void Style_SetLexer(PEDITLEXER pLexNew, BOOL bLexerChanged) noexcept {
 		InitAutoCompletionCache(pLexNew);
 		UpdateStatusBarCache(StatusItem_Lexer);
 		UpdateStatusbar();
+		UpdateToolbar();
 	}
 
 	// font might changed
 	UpdateLineNumberWidth();
 	UpdateBookmarkMarginWidth();
 	UpdateFoldMarginWidth();
+	EditSpellCheckSchedule();
 }
 
 //=============================================================================

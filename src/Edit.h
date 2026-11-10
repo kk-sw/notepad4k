@@ -290,6 +290,7 @@ enum {
 	IndicatorNumber_MarkOccurrence = INDICATOR_CONTAINER + 0,
 	IndicatorNumber_MatchBrace = INDICATOR_CONTAINER + 1,
 	IndicatorNumber_MatchBraceError = INDICATOR_CONTAINER + 2,
+	IndicatorNumber_SpellCheck = INDICATOR_CONTAINER + 3,
 	// [INDICATOR_IME, INDICATOR_IME_MAX] are reserved for IME.
 
 	MarginNumber_LineNumber = 0,
@@ -446,6 +447,25 @@ void	EditAutoIndent() noexcept;
 void	EditToggleCommentLine(bool alternative) noexcept;
 void	EditToggleCommentBlock(bool alternative) noexcept;
 void	EditInsertScriptShebangLine() noexcept;
+bool	IsSpellCheckStyle(int style) noexcept;
+
+// in EditSpellCheck.cpp
+struct EditSpellCheckConfig {
+	bool bEnabled;
+	WCHAR wszLanguage[LOCALE_NAME_MAX_LENGTH]; // empty: user default locale
+};
+extern EditSpellCheckConfig spellCheckConfig;
+bool	EditSpellCheckIsAvailable() noexcept;
+bool	EditSpellCheckIsUsable() noexcept;
+void	EditSpellCheckToggle() noexcept;
+void	EditSpellCheckSchedule() noexcept;
+void	EditSpellCheckUpdateUI(unsigned updated) noexcept;
+void	EditSpellCheckOnTimer() noexcept;
+void	EditSpellCheckInitMenu(HMENU hmenu) noexcept;
+HMENU	EditSpellCheckCreateLanguageMenu() noexcept;
+void	EditSpellCheckContextMenu(HMENU hmenu, Sci_Position pos, DWORD docRevision) noexcept;
+bool	EditSpellCheckCommand(UINT id, DWORD docRevision) noexcept;
+void	EditSpellCheckReleaseResources() noexcept;
 
 enum CallTipType {
 	CallTipType_None,

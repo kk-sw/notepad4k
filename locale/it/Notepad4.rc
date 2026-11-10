@@ -490,6 +490,12 @@ BEGIN
 			MENUITEM "Resetta &zoom\tCtrl+\\",		IDM_VIEW_RESETZOOM
 		END
 		MENUITEM "Attiva\\Disattiva &schermo intero\tF11 [Esc]",	IDM_VIEW_TOGGLE_FULLSCREEN
+		MENUITEM SEPARATOR
+		MENUITEM "Controllo ortogr&afico",					IDM_VIEW_SPELLCHECK
+		POPUP "Lingua del controllo ortografico"
+		BEGIN
+			MENUITEM "Predefinito",									IDM_SPELL_LANG_FIRST
+		END
 	END
 	POPUP "&Schema"
 	BEGIN
@@ -1798,6 +1804,16 @@ END
 
 STRINGTABLE
 BEGIN
+    IDS_SPELL_ADD_TO_DICT   "Aggiungi al dizionario"
+    IDS_SPELL_IGNORE_ALL    "Ignora tutto"
+    IDS_SPELL_DELETE_REPEATED "Elimina parola ripetuta"
+    IDS_SPELL_NO_SUGGESTIONS "(Nessun suggerimento)"
+    IDS_SPELL_CHECK_SELECTION "Controllo ortografico della selezione"
+    IDS_SPELL_SELECTION_RESULT "Errori ortografici nella selezione: %d"
+END
+
+STRINGTABLE
+BEGIN
     IDT_FILE_NEW            "Nuovo"
     IDT_FILE_OPEN           "Apri"
     IDT_FILE_BROWSE         "Naviga"
@@ -1825,6 +1841,10 @@ BEGIN
     IDT_FILE_LAUNCH         "Esegui documento"
     IDT_VIEW_ALWAYSONTOP    "Sempre in cima"
     IDT_FILE_NEWWINDOW      "Nuova finestra"
+    IDT_EDIT_CODE_PRETTY    "Abbellire il CSS/JS/JSON"
+    IDT_VIEW_SPELLCHECK     "Controllo ortografico"
+    IDT_VIEW_RESETZOOM      "Resetta zoom"
+    IDT_EDIT_LINECOMMENT    "Aggiungi\\Rimuovi commento linea"
 END
 
 STRINGTABLE

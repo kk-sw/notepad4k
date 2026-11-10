@@ -490,6 +490,12 @@ BEGIN
 			MENUITEM "拡大縮小リセット(&R)\tCtrl+\\",		IDM_VIEW_RESETZOOM
 		END
 		MENUITEM "全画面表示の切替(&S)\tF11 [Esc]",	IDM_VIEW_TOGGLE_FULLSCREEN
+		MENUITEM SEPARATOR
+		MENUITEM "スペルチェック",						IDM_VIEW_SPELLCHECK
+		POPUP "スペルチェックの言語"
+		BEGIN
+			MENUITEM "標準",							IDM_SPELL_LANG_FIRST
+		END
 	END
 	POPUP "文書(&M)"
 	BEGIN
@@ -1798,6 +1804,16 @@ END
 
 STRINGTABLE
 BEGIN
+    IDS_SPELL_ADD_TO_DICT   "辞書に追加"
+    IDS_SPELL_IGNORE_ALL    "すべて無視"
+    IDS_SPELL_DELETE_REPEATED "繰り返された単語を削除"
+    IDS_SPELL_NO_SUGGESTIONS "(候補なし)"
+    IDS_SPELL_CHECK_SELECTION "選択範囲のスペルチェック"
+    IDS_SPELL_SELECTION_RESULT "選択範囲のスペルミス: %d"
+END
+
+STRINGTABLE
+BEGIN
     IDT_FILE_NEW            "新規"
     IDT_FILE_OPEN           "開く"
     IDT_FILE_BROWSE         "ファイラで開く"
@@ -1825,6 +1841,10 @@ BEGIN
     IDT_FILE_LAUNCH         "開いている文書を実行"
     IDT_VIEW_ALWAYSONTOP    "常に手前に表示"
     IDT_FILE_NEWWINDOW      "New Window"
+    IDT_EDIT_CODE_PRETTY    "CSS/JS/JSON 整形"
+    IDT_VIEW_SPELLCHECK     "スペルチェック"
+    IDT_VIEW_RESETZOOM      "拡大縮小リセット"
+    IDT_EDIT_LINECOMMENT    "行コメントの切替"
 END
 
 STRINGTABLE

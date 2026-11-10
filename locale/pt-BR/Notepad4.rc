@@ -490,6 +490,12 @@ BEGIN
 			MENUITEM "&Restaurar Zoom\tCtrl+\\",	IDM_VIEW_RESETZOOM
 		END
 		MENUITEM "Alternar Tela Cheia\tF11 [Esc]",	IDM_VIEW_TOGGLE_FULLSCREEN
+		MENUITEM SEPARATOR
+		MENUITEM "V&erificação Ortográfica",				IDM_VIEW_SPELLCHECK
+		POPUP "Idioma da Verificação Orto&gráfica"
+		BEGIN
+			MENUITEM "Padrão",								IDM_SPELL_LANG_FIRST
+		END
 	END
 	POPUP "Es&quema"
 	BEGIN
@@ -1798,6 +1804,16 @@ END
 
 STRINGTABLE
 BEGIN
+    IDS_SPELL_ADD_TO_DICT   "Adicionar ao Dicionário"
+    IDS_SPELL_IGNORE_ALL    "Ignorar Tudo"
+    IDS_SPELL_DELETE_REPEATED "Excluir Palavra Repetida"
+    IDS_SPELL_NO_SUGGESTIONS "(Sem Sugestões)"
+    IDS_SPELL_CHECK_SELECTION "Verificar ortografia da seleção"
+    IDS_SPELL_SELECTION_RESULT "Erros ortográficos na seleção: %d"
+END
+
+STRINGTABLE
+BEGIN
     IDT_FILE_NEW            "Novo"
     IDT_FILE_OPEN           "Abrir"
     IDT_FILE_BROWSE         "Navegar"
@@ -1825,6 +1841,10 @@ BEGIN
     IDT_FILE_LAUNCH         "Executar Documento"
     IDT_VIEW_ALWAYSONTOP    "Sempre Visível"
     IDT_FILE_NEWWINDOW      "Nova Janela"
+    IDT_EDIT_CODE_PRETTY    "Formatar (Pretty) CSS/JS/JSON"
+    IDT_VIEW_SPELLCHECK     "Verificação Ortográfica"
+    IDT_VIEW_RESETZOOM      "Restaurar Zoom"
+    IDT_EDIT_LINECOMMENT    "Alternar Comentário de Linha"
 END
 
 STRINGTABLE

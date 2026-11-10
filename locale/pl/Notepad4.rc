@@ -490,6 +490,12 @@ BEGIN
 			MENUITEM "&Rozmiar pierwotny\tCtrl+\\",	IDM_VIEW_RESETZOOM
 		END
 		MENUITEM "Przełącz tryb pełno&ekranowy\tF11 [Esc]",IDM_VIEW_TOGGLE_FULLSCREEN
+		MENUITEM SEPARATOR
+		MENUITEM "Sprawdzanie pisowni",						IDM_VIEW_SPELLCHECK
+		POPUP "Język sprawdzania pisowni"
+		BEGIN
+			MENUITEM "Domyślny",							IDM_SPELL_LANG_FIRST
+		END
 	END
 	POPUP "Sche&mat"
 	BEGIN
@@ -1798,6 +1804,16 @@ END
 
 STRINGTABLE
 BEGIN
+    IDS_SPELL_ADD_TO_DICT   "Dodaj do słownika"
+    IDS_SPELL_IGNORE_ALL    "Ignoruj wszystkie"
+    IDS_SPELL_DELETE_REPEATED "Usuń powtórzone słowo"
+    IDS_SPELL_NO_SUGGESTIONS "(Brak sugestii)"
+    IDS_SPELL_CHECK_SELECTION "Sprawdź pisownię zaznaczenia"
+    IDS_SPELL_SELECTION_RESULT "Błędy pisowni w zaznaczeniu: %d"
+END
+
+STRINGTABLE
+BEGIN
     IDT_FILE_NEW            "Nowy"
     IDT_FILE_OPEN           "Otwórz"
     IDT_FILE_BROWSE         "Przeglądaj"
@@ -1825,6 +1841,10 @@ BEGIN
     IDT_FILE_LAUNCH         "Uruchom ten dokument"
     IDT_VIEW_ALWAYSONTOP    "Zawsze na wierzchu"
     IDT_FILE_NEWWINDOW      "Nowe okno"
+    IDT_EDIT_CODE_PRETTY    "Popraw formatowanie CSS/JS/JSON"
+    IDT_VIEW_SPELLCHECK     "Sprawdzanie pisowni"
+    IDT_VIEW_RESETZOOM      "Rozmiar pierwotny"
+    IDT_EDIT_LINECOMMENT    "Przełącz komentarz liniowy"
 END
 
 STRINGTABLE

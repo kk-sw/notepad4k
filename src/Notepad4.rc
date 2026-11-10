@@ -490,6 +490,12 @@ BEGIN
 			MENUITEM "&Reset Zoom\tCtrl+\\",		IDM_VIEW_RESETZOOM
 		END
 		MENUITEM "Toggle Full &Screen\tF11 [Esc]",	IDM_VIEW_TOGGLE_FULLSCREEN
+		MENUITEM SEPARATOR
+		MENUITEM "Spell Check",								IDM_VIEW_SPELLCHECK
+		POPUP "Spell Check Language"
+		BEGIN
+			MENUITEM "Default",								IDM_SPELL_LANG_FIRST
+		END
 	END
 	POPUP "Sche&me"
 	BEGIN
@@ -1798,6 +1804,16 @@ END
 
 STRINGTABLE
 BEGIN
+    IDS_SPELL_ADD_TO_DICT   "Add to Dictionary"
+    IDS_SPELL_IGNORE_ALL    "Ignore All"
+    IDS_SPELL_DELETE_REPEATED "Delete Repeated Word"
+    IDS_SPELL_NO_SUGGESTIONS "(No Suggestions)"
+    IDS_SPELL_CHECK_SELECTION "Spell Check Selection"
+    IDS_SPELL_SELECTION_RESULT "Spelling errors in selection: %d"
+END
+
+STRINGTABLE
+BEGIN
     IDT_FILE_NEW            "New"
     IDT_FILE_OPEN           "Open"
     IDT_FILE_BROWSE         "Browse"
@@ -1825,6 +1841,10 @@ BEGIN
     IDT_FILE_LAUNCH         "Execute Document"
     IDT_VIEW_ALWAYSONTOP    "Always On Top"
     IDT_FILE_NEWWINDOW      "New Window"
+    IDT_EDIT_CODE_PRETTY    "CSS/JS/JSON Pretty"
+    IDT_VIEW_SPELLCHECK     "Spell Check"
+    IDT_VIEW_RESETZOOM      "Reset Zoom"
+    IDT_EDIT_LINECOMMENT    "Toggle Line Comment"
 END
 
 STRINGTABLE

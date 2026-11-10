@@ -27,4 +27,8 @@
 //! Enable localization for scheme/lexer style names.
 #define NP2_ENABLE_LOCALIZE_STYLE_NAME			1
 
+//! Enable spell checking with Windows Spell Checking API (Windows 8 and above).
+// Also requires <spellcheck.h> from the Windows SDK, otherwise the feature is disabled.
+#define NP2_ENABLE_SPELL_CHECK					1
+
 // scintilla\include\LaTeXInput.h defined NP2_ENABLE_LATEX_LIKE_EMOJI_INPUT

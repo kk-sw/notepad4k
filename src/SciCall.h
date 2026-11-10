@@ -429,6 +429,10 @@ inline Sci_Position SciCall_PositionFromPoint(Sci_Pixels x, Sci_Pixels y) noexce
 	return SciCall(SCI_POSITIONFROMPOINT, x, y);
 }
 
+inline Sci_Position SciCall_PositionFromPointClose(Sci_Pixels x, Sci_Pixels y) noexcept {
+	return SciCall(SCI_POSITIONFROMPOINTCLOSE, x, y);
+}
+
 inline Sci_Pixels SciCall_PointXFromPosition(Sci_Position pos) noexcept {
 	return static_cast<Sci_Pixels>(SciCall(SCI_POINTXFROMPOSITION, 0, pos));
 }
@@ -463,6 +467,14 @@ inline Sci_Position SciCall_CountCharacters(Sci_Position start, Sci_Position end
 
 inline void SciCall_CountCharactersAndColumns(Sci_TextToFindFull *ft) noexcept {
 	SciCall(SCI_COUNTCHARACTERSANDCOLUMNS, 0, AsInteger<LPARAM>(ft));
+}
+
+inline Sci_Position SciCall_PositionRelativeCodeUnits(Sci_Position position, Sci_Position relative) noexcept {
+	return SciCall(SCI_POSITIONRELATIVECODEUNITS, position, relative);
+}
+
+inline Sci_Position SciCall_CountCodeUnits(Sci_Position start, Sci_Position end) noexcept {
+	return SciCall(SCI_COUNTCODEUNITS, start, end);
 }
 
 // Multiple Selection and Virtual Space
@@ -535,6 +547,10 @@ inline Sci_Line SciCall_GetFirstVisibleLine() noexcept {
 
 inline Sci_Line SciCall_SetFirstVisibleLine(Sci_Line displayLine) noexcept {
 	return SciCall(SCI_SETFIRSTVISIBLELINE, displayLine, 0);
+}
+
+inline Sci_Line SciCall_LinesOnScreen() noexcept {
+	return SciCall(SCI_LINESONSCREEN, 0, 0);
 }
 
 inline void SciCall_SetXOffset(Sci_Pixels xOffset) noexcept {
@@ -1092,6 +1108,22 @@ inline void SciCall_IndicatorClearRange(Sci_Position start, Sci_Position length)
 
 inline void SciCall_IndicatorFillRange(Sci_Position start, Sci_Position length) noexcept {
 	SciCall(SCI_INDICATORFILLRANGE, start, length);
+}
+
+inline int SciCall_IndicatorAllOnFor(Sci_Position position) noexcept {
+	return static_cast<int>(SciCall(SCI_INDICATORALLONFOR, position, 0));
+}
+
+inline int SciCall_IndicatorValueAt(int indicator, Sci_Position position) noexcept {
+	return static_cast<int>(SciCall(SCI_INDICATORVALUEAT, indicator, position));
+}
+
+inline Sci_Position SciCall_IndicatorStart(int indicator, Sci_Position position) noexcept {
+	return SciCall(SCI_INDICATORSTART, indicator, position);
+}
+
+inline Sci_Position SciCall_IndicatorEnd(int indicator, Sci_Position position) noexcept {
+	return SciCall(SCI_INDICATOREND, indicator, position);
 }
 
 // Autocompletion

@@ -586,6 +586,15 @@ static inline bool IsCommentStyle(int style) noexcept {
 	return BitTestEx(CommentStyleMask, style);
 }
 
+bool IsSpellCheckStyle(int style) noexcept {
+	if (pLexCurrent->iLexer == SCLEX_NULL) {
+		return true;
+	}
+	return BitTestEx(CommentStyleMask, style)
+		|| BitTestEx(AllStringStyleMask, style)
+		|| BitTestEx(PlainTextStyleMask, style);
+}
+
 bool IsAutoCompletionWordCharacter(uint32_t ch) noexcept {
 	if (ch < 0x80) {
 		return IsDocWordChar(ch);

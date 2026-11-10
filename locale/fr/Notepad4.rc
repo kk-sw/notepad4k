@@ -490,6 +490,12 @@ BEGIN
 			MENUITEM "Reset du niveau de zoom\tCtrl+\\",		IDM_VIEW_RESETZOOM
 		END
 		MENUITEM "Basculer en mode plein écran\tF11 [Esc]",	IDM_VIEW_TOGGLE_FULLSCREEN
+		MENUITEM SEPARATOR
+		MENUITEM "Vérification orthographique",				IDM_VIEW_SPELLCHECK
+		POPUP "Langue de vérification orthographique"
+		BEGIN
+			MENUITEM "Défaut",									IDM_SPELL_LANG_FIRST
+		END
 	END
 	POPUP "Schéma"
 	BEGIN
@@ -1798,6 +1804,16 @@ END
 
 STRINGTABLE
 BEGIN
+    IDS_SPELL_ADD_TO_DICT   "Ajouter au dictionnaire"
+    IDS_SPELL_IGNORE_ALL    "Tout ignorer"
+    IDS_SPELL_DELETE_REPEATED "Supprimer le mot répété"
+    IDS_SPELL_NO_SUGGESTIONS "(Aucune suggestion)"
+    IDS_SPELL_CHECK_SELECTION "Vérifier l'orthographe de la sélection"
+    IDS_SPELL_SELECTION_RESULT "Fautes d'orthographe dans la sélection : %d"
+END
+
+STRINGTABLE
+BEGIN
     IDT_FILE_NEW            "Nouveau"
     IDT_FILE_OPEN           "Ouvrir"
     IDT_FILE_BROWSE         "Parcourir"
@@ -1825,6 +1841,10 @@ BEGIN
     IDT_FILE_LAUNCH         "Executer le document"
     IDT_VIEW_ALWAYSONTOP    "Toujours devant"
     IDT_FILE_NEWWINDOW      "New Window"
+    IDT_EDIT_CODE_PRETTY    "CSS/JS/JSON Pretty"
+    IDT_VIEW_SPELLCHECK     "Vérification orthographique"
+    IDT_VIEW_RESETZOOM      "Reset du niveau de zoom"
+    IDT_EDIT_LINECOMMENT    "Déplier les commentaires"
 END
 
 STRINGTABLE

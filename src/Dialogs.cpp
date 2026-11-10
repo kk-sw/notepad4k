@@ -255,6 +255,7 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwnd, UINT umsg, WPARAM wParam, LPARAM lParam
 			VERSION_BUILD_TOOL_MAJOR, VERSION_BUILD_TOOL_MINOR, VERSION_BUILD_TOOL_PATCH);
 #endif
 
+		SetWindowText(hwnd, MY_APPNAME L" - " VERSION_MOD_INFO);
 		SetDlgItemText(hwnd, IDC_VERSION, VERSION_FILEVERSION_LONG);
 		SetDlgItemText(hwnd, IDC_BUILD_INFO, wch);
 
@@ -314,7 +315,7 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwnd, UINT umsg, WPARAM wParam, LPARAM lParam
 				LPCWSTR currentEncoding = Encoding_GetLabel(iCurrentEncoding);
 				GetDlgItemText(hwnd, IDC_BUILD_INFO, wch, COUNTOF(wch));
 				wsprintf(tch, L"%s\n%s\nEncoding: %s, %s\nScheme: %s, %s\nSystem: %u.%u.%u %s %s\n",
-					VERSION_FILEVERSION_LONG, wch,
+					VERSION_FILEVERSION_LONG L" - " VERSION_MOD_INFO, wch,
 					currentEncoding, defaultEncoding,
 					PathFindExtension(szCurFile), pLexCurrent->pszName,
 					version.dwMajorVersion, version.dwMinorVersion, version.dwBuildNumber,
