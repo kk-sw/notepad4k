@@ -1846,6 +1846,9 @@ BEGIN
     IDT_VIEW_SPELLCHECK     "Проверка орфографии"
     IDT_VIEW_RESETZOOM      "Сбросить масштаб"
     IDT_EDIT_LINECOMMENT    "Вкл./выкл. комментирование строки"
+    IDT_EDIT_MARKDOWN_BOLD  "Markdown Bold (**)"
+    IDT_EDIT_MARKDOWN_UNDERLINE "Markdown Underline (_)"
+    IDT_EDIT_MARKDOWN_CODE  "Markdown Inline Code (`)"
 END
 
 STRINGTABLE

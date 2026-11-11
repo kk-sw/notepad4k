@@ -1845,6 +1845,9 @@ BEGIN
     IDT_VIEW_SPELLCHECK     "スペルチェック"
     IDT_VIEW_RESETZOOM      "拡大縮小リセット"
     IDT_EDIT_LINECOMMENT    "行コメントの切替"
+    IDT_EDIT_MARKDOWN_BOLD  "Markdown Bold (**)"
+    IDT_EDIT_MARKDOWN_UNDERLINE "Markdown Underline (_)"
+    IDT_EDIT_MARKDOWN_CODE  "Markdown Inline Code (`)"
 END
 
 STRINGTABLE

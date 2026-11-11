@@ -269,6 +269,9 @@ def make_notepad4_toolbar_bitmap(size):
 		f'{images}/SpellCheck.png',		# IDT_VIEW_SPELLCHECK
 		f'{images}/ResetZoom.png',		# IDT_VIEW_RESETZOOM
 		f'{images}/LineComment.png',	# IDT_EDIT_LINECOMMENT
+		f'{images}/MarkdownBold.png',	# IDT_EDIT_MARKDOWN_BOLD
+		f'{images}/MarkdownUnderline.png',	# IDT_EDIT_MARKDOWN_UNDERLINE
+		f'{images}/MarkdownCode.png',	# IDT_EDIT_MARKDOWN_CODE
 	], f'Toolbar{size}.bmp')
 
 def make_all_notepad4_toolbar_bitmap():

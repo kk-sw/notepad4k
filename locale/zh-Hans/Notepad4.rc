@@ -1845,6 +1845,9 @@ BEGIN
     IDT_VIEW_SPELLCHECK     "拼写检查"
     IDT_VIEW_RESETZOOM      "重置缩放"
     IDT_EDIT_LINECOMMENT    "切换行注释"
+    IDT_EDIT_MARKDOWN_BOLD  "Markdown Bold (**)"
+    IDT_EDIT_MARKDOWN_UNDERLINE "Markdown Underline (_)"
+    IDT_EDIT_MARKDOWN_CODE  "Markdown Inline Code (`)"
 END
 
 STRINGTABLE

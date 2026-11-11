@@ -1845,6 +1845,9 @@ BEGIN
     IDT_VIEW_SPELLCHECK     "Controllo ortografico"
     IDT_VIEW_RESETZOOM      "Resetta zoom"
     IDT_EDIT_LINECOMMENT    "Aggiungi\\Rimuovi commento linea"
+    IDT_EDIT_MARKDOWN_BOLD  "Markdown Bold (**)"
+    IDT_EDIT_MARKDOWN_UNDERLINE "Markdown Underline (_)"
+    IDT_EDIT_MARKDOWN_CODE  "Markdown Inline Code (`)"
 END
 
 STRINGTABLE

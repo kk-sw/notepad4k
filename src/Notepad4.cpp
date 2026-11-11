@@ -68,7 +68,7 @@ static HICON hTrayIcon = nullptr;
 static UINT uTrayIconDPI = 0;
 
 #define TOOLBAR_COMMAND_BASE	IDT_FILE_NEW
-#define DefaultToolbarButtons	L"22 3 0 1 27 2 0 4 18 19 0 10 11 0 12 0 24 0 13 14 30 0 28 0 31 0 29"
+#define DefaultToolbarButtons	L"22 3 0 1 27 2 0 4 18 19 0 10 11 0 12 0 24 0 13 14 30 0 28 0 31 0 29 0 32 33 34"
 // NOLINTBEGIN(readability-redundant-zero-initializer)
 #if NP2_ENABLE_CUSTOMIZE_TOOLBAR_LABELS
 static TBBUTTON tbbMainWnd[] =
@@ -108,6 +108,9 @@ static const TBBUTTON tbbMainWnd[] =
 	{28, 	IDT_VIEW_SPELLCHECK, 	TBSTATE_ENABLED, BTNS_DROPDOWN, {0}, 0, 0},
 	{29, 	IDT_VIEW_RESETZOOM, 	TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, 0},
 	{30, 	IDT_EDIT_LINECOMMENT, 	TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, 0},
+	{31, 	IDT_EDIT_MARKDOWN_BOLD, 	TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, 0},
+	{32, 	IDT_EDIT_MARKDOWN_UNDERLINE, 	TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, 0},
+	{33, 	IDT_EDIT_MARKDOWN_CODE, 	TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, 0},
 };
 // NOLINTEND(readability-redundant-zero-initializer)
 
@@ -406,6 +409,10 @@ static bool	flagDisplayHelp			= false;
 
 static inline bool IsDocumentModified() noexcept {
 	return bDocumentModified || iCurrentEncoding != iOriginalEncoding;
+}
+
+static inline bool IsMarkdownFormatAvailable() noexcept {
+	return pLexCurrent->rid == NP2LEX_MARKDOWN && StrNotEmpty(szCurFile);
 }
 
 static inline bool IsTopMost() noexcept {
@@ -3567,6 +3574,16 @@ LRESULT MsgCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
 		EditToggleCommentLine(false);
 		break;
 
+	case IDT_EDIT_MARKDOWN_BOLD:
+	case IDT_EDIT_MARKDOWN_UNDERLINE:
+	case IDT_EDIT_MARKDOWN_CODE:
+		if (IsMarkdownFormatAvailable() && !SciCall_IsSelectionEmpty()) {
+			LPCWSTR marker = (LOWORD(wParam) == IDT_EDIT_MARKDOWN_BOLD) ? L"**"
+				: ((LOWORD(wParam) == IDT_EDIT_MARKDOWN_UNDERLINE) ? L"_" : L"`");
+			EditEncloseSelection(marker, marker);
+		}
+		break;
+
 	case IDM_EDIT_STREAMCOMMENT:
 		EditToggleCommentBlock(false);
 		break;
@@ -6468,6 +6485,10 @@ void UpdateToolbar() noexcept {
 	EnableTool(IDT_EDIT_DELETE, nonEmpty);
 	EnableTool(IDT_EDIT_CODE_PRETTY, nonEmpty && (pLexCurrent->lexerAttr & LexerAttr_CodePretty));
 	EnableTool(IDT_EDIT_LINECOMMENT, !(pLexCurrent->lexerAttr & LexerAttr_NoLineComment));
+	const bool markdownFormat = IsMarkdownFormatAvailable();
+	EnableTool(IDT_EDIT_MARKDOWN_BOLD, markdownFormat);
+	EnableTool(IDT_EDIT_MARKDOWN_UNDERLINE, markdownFormat);
+	EnableTool(IDT_EDIT_MARKDOWN_CODE, markdownFormat);
 
 	CheckTool(IDT_VIEW_WORDWRAP, fvCurFile.fWordWrap);
 	CheckTool(IDT_VIEW_ALWAYSONTOP, IsTopMost());
@@ -7153,6 +7174,7 @@ bool FileSave(FileSaveFlag saveFlag) {
 						StrCpyEx(szTitleExcerpt, L"");
 					}
 					UpdateWindowTitle();
+					UpdateToolbar();
 					if (flagLexerSpecified) {
 						flagLexerSpecified = false;
 						if (pLexCurrent->rid != iInitialLexer) {

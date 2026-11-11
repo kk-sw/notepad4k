@@ -1845,6 +1845,9 @@ BEGIN
     IDT_VIEW_SPELLCHECK     "맞춤법 검사"
     IDT_VIEW_RESETZOOM      "확대/축소 재설정"
     IDT_EDIT_LINECOMMENT    "줄 주석 전환"
+    IDT_EDIT_MARKDOWN_BOLD  "Markdown Bold (**)"
+    IDT_EDIT_MARKDOWN_UNDERLINE "Markdown Underline (_)"
+    IDT_EDIT_MARKDOWN_CODE  "Markdown Inline Code (`)"
 END
 
 STRINGTABLE
