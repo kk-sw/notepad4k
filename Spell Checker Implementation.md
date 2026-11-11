@@ -5,14 +5,15 @@ Date: 2026-11-09
 - Spell checking uses the **Windows Spell Checking API** (`ISpellCheckerFactory`/`ISpellChecker`) and is **Windows 10+ only**. The rest of Notepad4 still runs on Vista+.
   - Everything lives in a new file, `src/EditSpellCheck.cpp`, plus small hooks in `Notepad4.cpp`, `Styles.cpp`, `EditAutoC.cpp` and `SciCall.h`.
 - Squiggles are drawn on a **250 ms debounce timer**, only on the **visible lines**, using Scintilla indicator 11. Code files are checked only in comments, strings and plain text.
+  - camelCase and PascalCase words (`userManager`, `UserInventoryTest`, `HTTPServer`) are never flagged; plurals like `URLs` are skipped too; see `IsMixedCaseWord`.
 - UI entry points:
   - View → Spell Check / Spell Check Language.
   - A toolbar split button: the button toggles checking, the ▾ arrow opens the language list.
   - The right-click menu: suggestions, Add to Dictionary, Ignore All, and Spell Check Selection.
-- The AVX2 Release build passes with 0 warnings, but there is **no runtime test yet** and nothing is committed.
+- The AVX2 Release build passes with 0 warnings, but the test checklist (section 11) hasn't been run yet.
 - Open item: unfolding code or toggling word wrap may not recheck the newly visible lines.
 
-Design rationale and the alternatives that were rejected are in [Spell Checker Plan.md](Spell%20Checker%20Plan.md). This doc covers what was built. Line numbers refer to the uncommitted working tree.
+This doc covers what was built. Line numbers are approximate and drift as the code changes.
 
 ---
 
@@ -177,7 +178,7 @@ Windows only has a dictionary for a language once it is installed (Settings → 
 
 ## 10. Review status
 
-An independent review agent found no crashes or leaks, plus eight issues: one medium and seven low.
+A code review found no crashes or leaks, plus eight issues: one medium and seven low.
 
 | # | Finding | Status |
 |---|---|---|
@@ -192,7 +193,7 @@ An independent review agent found no crashes or leaks, plus eight issues: one me
 
 ## 11. Test checklist
 
-Not yet run. The checklist is in [Spell Checker Plan.md](Spell%20Checker%20Plan.md) §8. It also needs:
+Not yet run. Items to check:
 
 - [ ] Toolbar ▾ shows the language list; the checked item matches the View menu.
 - [ ] Spell Check Selection with continuous checking off: squiggles, a count message, and working right-click suggestions.

@@ -172,6 +172,17 @@ void ClearAllIndicators() noexcept {
 	SciCall_IndicatorClearRange(0, SciCall_GetLength());
 }
 
+// camelCase or PascalCase identifier such as userManager, UserInventoryTest or HTTPServer: has a lowercase letter and an uppercase one after the first.
+bool IsMixedCaseWord(LPCWSTR word, ULONG count) noexcept {
+	bool hasLower = false;
+	bool hasInnerUpper = false;
+	for (ULONG i = 0; i < count; i++) {
+		hasLower |= IsCharLower(word[i]) != FALSE;
+		hasInnerUpper |= i != 0 && IsCharUpper(word[i]);
+	}
+	return hasLower && hasInnerUpper;
+}
+
 // Calls callback(start, end, error) for each misspelled word in [lineStart, lineEnd), stops when it returns false.
 template <typename Callback>
 void CheckLineText(Sci_Position lineStart, Sci_Position lineEnd, Callback callback) noexcept {
@@ -207,7 +218,8 @@ void CheckLineText(Sci_Position lineStart, Sci_Position lineEnd, Callback callba
 		ULONG count = 0;
 		if (SUCCEEDED(error->get_StartIndex(&startIndex)) && SUCCEEDED(error->get_Length(&count)) && count != 0
 			// word cut by the line truncation
-			&& !(truncated && startIndex + count >= static_cast<ULONG>(cch))) {
+			&& !(truncated && startIndex + count >= static_cast<ULONG>(cch))
+			&& !IsMixedCaseWord(wch + startIndex, count)) {
 			if (startIndex < offset) {
 				position = lineStart;
 				offset = 0;

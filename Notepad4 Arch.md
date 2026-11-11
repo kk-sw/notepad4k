@@ -330,7 +330,7 @@ How rows are grouped:
 
 | File | Purpose |
 |---|---|
-| `readme.md` | Project overview, features, supported languages and OS, localization credits |
+| `readme.md` | Fork overview: summary, upstream link, new features, build command, license |
 | `License.txt` | BSD 3-Clause (Notepad4, matepath, Notepad2, metapath, Notepad2-mod) + third-party notices |
 | `version.txt` | Upstream provenance: Notepad2-mod, Scintilla 5.6.7, Lexilla 5.5.4, Boost.Regex |
 | `version.sh` | Computes rev/hash from git; writes `src/VersionRev.h` and manifest |
