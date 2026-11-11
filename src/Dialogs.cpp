@@ -255,7 +255,7 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwnd, UINT umsg, WPARAM wParam, LPARAM lParam
 			VERSION_BUILD_TOOL_MAJOR, VERSION_BUILD_TOOL_MINOR, VERSION_BUILD_TOOL_PATCH);
 #endif
 
-		SetWindowText(hwnd, MY_APPNAME L" - " VERSION_MOD_INFO);
+		SetWindowText(hwnd, MY_APPNAME_DISPLAY);
 		SetDlgItemText(hwnd, IDC_VERSION, VERSION_FILEVERSION_LONG);
 		SetDlgItemText(hwnd, IDC_BUILD_INFO, wch);
 
@@ -265,6 +265,7 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwnd, UINT umsg, WPARAM wParam, LPARAM lParam
 		lf.lfWeight = FW_BOLD;
 		hFontTitle = CreateFontIndirect(&lf);
 		SendDlgItemMessage(hwnd, IDC_VERSION, WM_SETFONT, AsInteger<WPARAM>(hFontTitle), TRUE);
+		SendDlgItemMessage(hwnd, IDC_ORIGINAL_COPYRIGHT, WM_SETFONT, AsInteger<WPARAM>(hFontTitle), TRUE);
 		SetWindowLongPtr(hwnd, DWLP_USER, AsInteger<LONG_PTR>(hFontTitle));
 
 		wsprintf(wch, L"<A>%s</A>", VERSION_WEBPAGE_DISPLAY);
@@ -315,7 +316,7 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwnd, UINT umsg, WPARAM wParam, LPARAM lParam
 				LPCWSTR currentEncoding = Encoding_GetLabel(iCurrentEncoding);
 				GetDlgItemText(hwnd, IDC_BUILD_INFO, wch, COUNTOF(wch));
 				wsprintf(tch, L"%s\n%s\nEncoding: %s, %s\nScheme: %s, %s\nSystem: %u.%u.%u %s %s\n",
-					VERSION_FILEVERSION_LONG L" - " VERSION_MOD_INFO, wch,
+					VERSION_FILEVERSION_LONG, wch,
 					currentEncoding, defaultEncoding,
 					PathFindExtension(szCurFile), pLexCurrent->pszName,
 					version.dwMajorVersion, version.dwMinorVersion, version.dwBuildNumber,

@@ -68,7 +68,7 @@ static HICON hTrayIcon = nullptr;
 static UINT uTrayIconDPI = 0;
 
 #define TOOLBAR_COMMAND_BASE	IDT_FILE_NEW
-#define DefaultToolbarButtons	L"22 3 0 1 27 2 0 4 18 19 0 10 11 0 12 0 24 0 13 14 30 0 28 0 31 0 29 0 32 33 34"
+#define DefaultToolbarButtons	L"22 3 0 1 27 2 0 4 18 19 0 10 11 0 12 0 24 0 13 14 30 0 28 0 31 0 29 0 32 33 34 0 35"
 // NOLINTBEGIN(readability-redundant-zero-initializer)
 #if NP2_ENABLE_CUSTOMIZE_TOOLBAR_LABELS
 static TBBUTTON tbbMainWnd[] =
@@ -111,6 +111,7 @@ static const TBBUTTON tbbMainWnd[] =
 	{31, 	IDT_EDIT_MARKDOWN_BOLD, 	TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, 0},
 	{32, 	IDT_EDIT_MARKDOWN_UNDERLINE, 	TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, 0},
 	{33, 	IDT_EDIT_MARKDOWN_CODE, 	TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, 0},
+	{34, 	IDT_HELP_ABOUT, 	TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, 0},
 };
 // NOLINTEND(readability-redundant-zero-initializer)
 
@@ -4339,6 +4340,7 @@ LRESULT MsgCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
 		break;
 
 	case IDM_HELP_ABOUT:
+	case IDT_HELP_ABOUT:
 		// EditDumpDocumentStyledText(szCurFile);
 		ThemedDialogBox(g_hInstance, MAKEINTRESOURCE(IDD_ABOUT), hwnd, AboutDlgProc);
 		break;

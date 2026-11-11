@@ -21,9 +21,11 @@ A personal fork of [Notepad4](https://github.com/zufuliu/notepad4), a lightweigh
   - **Reset Zoom:** returns to 100 %.
   - **Toggle Line Comment.**
   - **Markdown Bold, Underline and Code:** wrap the selected text in `**`, `_` or `` ` ``. They're enabled only for Markdown files opened from disk.
+  - **About:** opens the About dialog.
 - **New default toolbar layout:** the new buttons are added and some rarely used ones are removed (they can still be added back).
   - An existing `Notepad4.ini` keeps its saved layout. Use View → Customize Toolbar to add the new buttons.
-- **Branding:** a refreshed app icon, and "mod" info in the About box and version resource.
+- **Branding:** a refreshed app icon and the name "Notepad4-k", shown in the About box, the Help menu and the exe's version info.
+  - The About box marks this as a custom build and lists the original copyrights under their own heading.
 
 ## Build
 
