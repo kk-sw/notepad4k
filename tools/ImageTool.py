@@ -273,6 +273,7 @@ def make_notepad4_toolbar_bitmap(size):
 		f'{images}/MarkdownUnderline.png',	# IDT_EDIT_MARKDOWN_UNDERLINE
 		f'{images}/MarkdownCode.png',	# IDT_EDIT_MARKDOWN_CODE
 		f'{images}/About.png',			# IDT_HELP_ABOUT
+		f'{images}/MarkdownLink.png',	# IDT_EDIT_MARKDOWN_LINK
 	], f'Toolbar{size}.bmp')
 
 def make_all_notepad4_toolbar_bitmap():

@@ -21,6 +21,7 @@ A personal fork of [Notepad4](https://github.com/zufuliu/notepad4), a lightweigh
   - **Reset Zoom:** returns to 100 %.
   - **Toggle Line Comment.**
   - **Markdown Bold, Underline and Code:** wrap the selected text in `**`, `_` or `` ` ``. They're enabled only for Markdown files opened from disk.
+  - **Markdown Link:** turns the selected text (e.g. a URL) into `[⇗](selected text)`, trimming spaces and line endings; does nothing on a multi-line selection. Same enable rule.
   - **About:** opens the About dialog.
 - **New default toolbar layout:** the new buttons are added and some rarely used ones are removed (they can still be added back).
   - An existing `Notepad4.ini` keeps its saved layout. Use View → Customize Toolbar to add the new buttons.

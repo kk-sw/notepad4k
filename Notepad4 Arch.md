@@ -573,7 +573,7 @@ How rows are grouped:
 | `tools/starttm.cpp` | Startup-time benchmark |
 | `tools/readme.txt` | Image sourcing and conversion notes |
 | `tools/lang/*` (85) | Keyword/API source lists per language (+ SQL dialects) |
-| `tools/images/**` (55 svg, 294 png) | Source art for toolbar, icons, cursors (+ **[new]** `CodePretty`, `SpellCheck`, `ResetZoom`, `LineComment`, `MarkdownBold`, `MarkdownUnderline`, `MarkdownCode`, `About`) |
+| `tools/images/**` (60 svg, 319 png) | Source art for toolbar, icons, cursors (+ **[new]** `CodePretty`, `SpellCheck`, `ResetZoom`, `LineComment`, `MarkdownBold`, `MarkdownUnderline`, `MarkdownCode`, `About`, `MarkdownLink`) |
 | `wiki/` (0) | Uninitialized wiki submodule |
 
 ---
@@ -591,10 +591,11 @@ How rows are grouped:
 | 32 | 31 `MarkdownBold` (bold `B`) | `IDT_EDIT_MARKDOWN_BOLD` 40631 | button | `EditEncloseSelection(L"**", L"**")` | `IsMarkdownFormatAvailable()`: a file loaded from disk with the Markdown scheme |
 | 33 | 32 `MarkdownUnderline` (`U` + blue bar) | `IDT_EDIT_MARKDOWN_UNDERLINE` 40632 | button | `EditEncloseSelection(L"_", L"_")` | Same |
 | 34 | 33 `MarkdownCode` (purple `</>`) | `IDT_EDIT_MARKDOWN_CODE` 40633 | button | ``EditEncloseSelection(L"`", L"`")`` | Same |
-| 35 | 34 `About` (blue info `i`) | `IDT_HELP_ABOUT` 40634 | button | Opens the About dialog (same as `IDM_HELP_ABOUT`, F1) | Always |
+| 35 | 34 `About` (blue info `i`) | `IDT_HELP_ABOUT` 40634 | button | Opens the About dialog (same as Help → About; no keyboard shortcut) | Always |
+| 36 | 35 `MarkdownLink` (blue/grey chain link) | `IDT_EDIT_MARKDOWN_LINK` 40635 | button | `EditEncloseSelection(L"[⇗](", L")")` via `EditMarkdownLinkSelection()`: selection (spaces and line endings trimmed) becomes the link target; does nothing if it spans lines | Same as the other Markdown buttons |
 
-- **Default layout** (`DefaultToolbarButtons`, `src/Notepad4.cpp:71`): `22 3 0 1 27 2 0 4 18 19 0 10 11 0 12 0 24 0 13 14 30 0 28 0 31 0 29 0 32 33 34 0 35`.
-  - Reset Zoom sits after Zoom In/Out; Pretty, Toggle Line Comment and Spell Check each get their own group, the three Markdown buttons share a group, and About comes last.
+- **Default layout** (`DefaultToolbarButtons`, `src/Notepad4.cpp:71`): `22 3 0 1 27 2 0 4 18 19 0 10 11 0 12 0 24 0 13 14 30 0 28 0 31 0 29 0 32 33 34 36 0 35`.
+  - Reset Zoom sits after Zoom In/Out; Pretty, Toggle Line Comment and Spell Check each get their own group, the four Markdown buttons (Bold, Underline, Code, Link) share a group, and About comes last.
 - **Markdown buttons:** each one wraps the selection in its marker and keeps the original text selected.
   - With no selection, they do nothing.
   - With a rectangular selection, they show the standard "not supported" notice.
@@ -637,4 +638,4 @@ CleanUpResources  EditSpellCheckReleaseResources (before OleUninitialize)
 | `src/Edit.h`, `src/SciCall.h`, `src/config.h`, `src/Notepad4.h` | Declarations, Scintilla wrappers, feature flag, timer ID |
 | `src/resource.h`, `src/Notepad4.rc`, `locale/*/Notepad4.rc` (11) | IDs, View menu items, strings, tooltips |
 | `build/VisualStudio/Notepad4.vcxproj(.filters)`, `build/CodeLite/Notepad4.project` | Register `EditSpellCheck.cpp` |
-| `res/Toolbar{16..48}.bmp`, `tools/images/**`, `tools/ImageTool.py` | Eight new toolbar images and their sources |
+| `res/Toolbar{16..48}.bmp`, `tools/images/**`, `tools/ImageTool.py` | Nine new toolbar images and their sources |

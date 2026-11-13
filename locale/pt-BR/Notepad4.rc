@@ -795,7 +795,7 @@ BEGIN
 		MENUITEM "&Wiki Online",				IDM_HELP_ONLINE_WIKI
 		MENUITEM "Ajuda da Linha de &Comando",			IDM_CMDLINE_HELP
 		MENUITEM SEPARATOR
-		MENUITEM "S&obre o Notepad4-k\tF1",			IDM_HELP_ABOUT
+		MENUITEM "S&obre o Notepad4-k",			IDM_HELP_ABOUT
 	END
 END
 
@@ -972,7 +972,6 @@ BEGIN
     VK_ESCAPE,      CMD_ESCAPE,                 VIRTKEY, NOINVERT
     VK_ESCAPE,      CMD_SHIFTESC,               VIRTKEY, SHIFT, NOINVERT
     VK_INSERT,      IDM_EDIT_COPY,              VIRTKEY, CONTROL, NOINVERT
-    VK_F1,          IDM_HELP_ABOUT,             VIRTKEY, NOINVERT
     VK_F10,         IDM_FILE_READONLY_MODE,     VIRTKEY, NOINVERT
     VK_F11,         IDM_VIEW_TOGGLE_FULLSCREEN, VIRTKEY, NOINVERT
     VK_F11,         IDM_VIEW_TOOLBAR,           VIRTKEY, CONTROL, NOINVERT
@@ -1853,6 +1852,7 @@ BEGIN
     IDT_EDIT_MARKDOWN_UNDERLINE "Markdown Underline (_)"
     IDT_EDIT_MARKDOWN_CODE  "Markdown Inline Code (`)"
     IDT_HELP_ABOUT          "Sobre o Notepad4-k"
+    IDT_EDIT_MARKDOWN_LINK  "Markdown Link [⇗](...)"
 END
 
 STRINGTABLE

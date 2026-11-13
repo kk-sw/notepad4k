@@ -68,7 +68,7 @@ static HICON hTrayIcon = nullptr;
 static UINT uTrayIconDPI = 0;
 
 #define TOOLBAR_COMMAND_BASE	IDT_FILE_NEW
-#define DefaultToolbarButtons	L"22 3 0 1 27 2 0 4 18 19 0 10 11 0 12 0 24 0 13 14 30 0 28 0 31 0 29 0 32 33 34 0 35"
+#define DefaultToolbarButtons	L"22 3 0 1 27 2 0 4 18 19 0 10 11 0 12 0 24 0 13 14 30 0 28 0 31 0 29 0 32 33 34 36 0 35"
 // NOLINTBEGIN(readability-redundant-zero-initializer)
 #if NP2_ENABLE_CUSTOMIZE_TOOLBAR_LABELS
 static TBBUTTON tbbMainWnd[] =
@@ -112,6 +112,7 @@ static const TBBUTTON tbbMainWnd[] =
 	{32, 	IDT_EDIT_MARKDOWN_UNDERLINE, 	TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, 0},
 	{33, 	IDT_EDIT_MARKDOWN_CODE, 	TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, 0},
 	{34, 	IDT_HELP_ABOUT, 	TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, 0},
+	{35, 	IDT_EDIT_MARKDOWN_LINK, 	TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, 0},
 };
 // NOLINTEND(readability-redundant-zero-initializer)
 
@@ -414,6 +415,26 @@ static inline bool IsDocumentModified() noexcept {
 
 static inline bool IsMarkdownFormatAvailable() noexcept {
 	return pLexCurrent->rid == NP2LEX_MARKDOWN && StrNotEmpty(szCurFile);
+}
+
+// a link target can't span lines, and a triple-click selection includes the line ending.
+static void EditMarkdownLinkSelection() noexcept {
+	if (SciCall_IsRectangularSelection()) {
+		EditEncloseSelection(L"[⇗](", L")");
+		return;
+	}
+	Sci_Position start = SciCall_GetSelectionStart();
+	Sci_Position end = SciCall_GetSelectionEnd();
+	while (start < end && IsASpace(SciCall_GetCharAt(start))) {
+		++start;
+	}
+	while (end > start && IsASpace(SciCall_GetCharAt(end - 1))) {
+		--end;
+	}
+	if (start < end && SciCall_LineFromPosition(start) == SciCall_LineFromPosition(end)) {
+		SciCall_SetSel(start, end);
+		EditEncloseSelection(L"[⇗](", L")");
+	}
 }
 
 static inline bool IsTopMost() noexcept {
@@ -3585,6 +3606,12 @@ LRESULT MsgCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
 		}
 		break;
 
+	case IDT_EDIT_MARKDOWN_LINK:
+		if (IsMarkdownFormatAvailable() && !SciCall_IsSelectionEmpty()) {
+			EditMarkdownLinkSelection();
+		}
+		break;
+
 	case IDM_EDIT_STREAMCOMMENT:
 		EditToggleCommentBlock(false);
 		break;
@@ -6491,6 +6518,7 @@ void UpdateToolbar() noexcept {
 	EnableTool(IDT_EDIT_MARKDOWN_BOLD, markdownFormat);
 	EnableTool(IDT_EDIT_MARKDOWN_UNDERLINE, markdownFormat);
 	EnableTool(IDT_EDIT_MARKDOWN_CODE, markdownFormat);
+	EnableTool(IDT_EDIT_MARKDOWN_LINK, markdownFormat);
 
 	CheckTool(IDT_VIEW_WORDWRAP, fvCurFile.fWordWrap);
 	CheckTool(IDT_VIEW_ALWAYSONTOP, IsTopMost());
