@@ -797,7 +797,7 @@ BEGIN
 		MENUITEM "온라인 위키(&W)",										IDM_HELP_ONLINE_WIKI
 		MENUITEM "명령줄 도움말(&C)",									IDM_CMDLINE_HELP
 		MENUITEM SEPARATOR
-		MENUITEM "Notepad4-k 정보(&A)...",							IDM_HELP_ABOUT
+		MENUITEM "Notepad4k 정보(&A)...",							IDM_HELP_ABOUT
 	END
 END
 
@@ -1078,7 +1078,7 @@ END
 
 IDD_ABOUT DIALOGEX 0, 0, 255, 180
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
-CAPTION "Notepad4-k"
+CAPTION "Notepad4k"
 FONT 9, "Segoe UI", 400, 0, 0x1
 BEGIN
     DEFPUSHBUTTON   "확인",IDOK,142,159,50,14
@@ -1087,7 +1087,7 @@ BEGIN
     LTEXT           "",IDC_VERSION,45,7,200,8
     LTEXT           "",IDC_BUILD_INFO,45,18,200,16
     CONTROL         "",IDC_STATIC,"Static",SS_ETCHEDHORZ,45,39,200,1
-    LTEXT           "Notepad4-k is a custom build of Notepad4.",IDC_STATIC,45,44,200,8
+    LTEXT           "Notepad4k is a custom build of Notepad4.",IDC_STATIC,45,44,200,8
     CONTROL         "",IDC_STATIC,"Static",SS_ETCHEDHORZ,45,57,200,1
     LTEXT           "Original Copyright",IDC_ORIGINAL_COPYRIGHT,45,62,200,8
     LTEXT           "Copyright © 2011-2026 Zufu Liu 및 모든 기여자",IDC_STATIC,45,74,200,8
@@ -1747,9 +1747,9 @@ END
 
 STRINGTABLE
 BEGIN
-    IDS_APPTITLE            "Notepad4"
+    IDS_APPTITLE            "Notepad4k"
     IDS_APPTITLE_ELEVATED   "%s (관리자 권한)"
-    IDS_APPTITLE_PASTEBOARD "Notepad4: 보드 붙여넣기"
+    IDS_APPTITLE_PASTEBOARD "Notepad4k: 보드 붙여넣기"
     IDS_UNTITLED            "제목 없음"
     IDS_TITLEEXCERPT        """%s"""
     IDS_READONLY_FILE       "(읽기 전용 파일)"
@@ -1866,7 +1866,7 @@ BEGIN
     IDT_EDIT_MARKDOWN_BOLD  "Markdown Bold (**)"
     IDT_EDIT_MARKDOWN_UNDERLINE "Markdown Underline (_)"
     IDT_EDIT_MARKDOWN_CODE  "Markdown Inline Code (`)"
-    IDT_HELP_ABOUT          "Notepad4-k 정보"
+    IDT_HELP_ABOUT          "Notepad4k 정보"
     IDT_EDIT_MARKDOWN_LINK  "Markdown Link [⇗](...)"
 END
 
