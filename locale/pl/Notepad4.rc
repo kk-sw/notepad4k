@@ -261,7 +261,7 @@ BEGIN
 			MENUITEM "&Usuń wiersz\tCtrl+Shift+D",		IDM_EDIT_DELETELINE
 			MENUITEM SEPARATOR
 			MENUITEM "Połą&cz wiersze\tCtrl+J",			IDM_EDIT_JOINLINES
-			MENUITEM "Podz&iel wiersz\tCtrl+I",			IDM_EDIT_SPLITLINES
+			MENUITEM "Podz&iel wiersz",			IDM_EDIT_SPLITLINES
 			MENUITEM "&Zawijanie kolumn...",			IDM_EDIT_COLUMNWRAP
 			MENUITEM "Połącz &akapity\tCtrl+Shift+J",	IDM_EDIT_JOINLINESEX
 		END
@@ -367,7 +367,7 @@ BEGIN
 		MENUITEM "Z&amień...\tCtrl+H",				IDM_EDIT_REPLACE
 		MENUITEM "Za&mień następny\tF4",			IDM_EDIT_REPLACENEXT
 		MENUITEM SEPARATOR
-		MENUITEM "Znajdź pasujący naw&ias\tCtrl+B",				IDM_EDIT_FINDMATCHINGBRACE
+		MENUITEM "Znajdź pasujący naw&ias",				IDM_EDIT_FINDMATCHINGBRACE
 		MENUITEM "Zaznacz t&ekst w nawiasach\tCtrl+Shift+B",	IDM_EDIT_SELTOMATCHINGBRACE
 		MENUITEM "Zaznacz w&yraz \tCtrl+Alt+Space",				IDM_EDIT_SELECTWORD
 		MENUITEM "Zaznacz &wiersze (rozszerz zaznaczenie)\tCtrl+Shift+Space",IDM_EDIT_SELECTLINE
@@ -887,7 +887,7 @@ BEGIN
     "A",            IDM_EDIT_COPYALL,           VIRTKEY, ALT, NOINVERT
     "A",            IDM_VIEW_FOLD_ALL,          VIRTKEY, SHIFT, ALT, NOINVERT
     "A",            CMD_RELOADANSI,             VIRTKEY, SHIFT, CONTROL, NOINVERT
-    "B",            IDM_EDIT_FINDMATCHINGBRACE, VIRTKEY, CONTROL, NOINVERT
+    "B",            CMD_MARKDOWN_BOLD,         VIRTKEY, CONTROL, NOINVERT
     "B",            IDM_EDIT_MERGEBLANKLINES,   VIRTKEY, ALT, NOINVERT
     "B",            IDM_EDIT_NUM2BIN,           VIRTKEY, CONTROL, ALT, NOINVERT
     "B",            IDM_EDIT_SELTOMATCHINGBRACE,VIRTKEY, SHIFT, CONTROL, NOINVERT
@@ -913,7 +913,7 @@ BEGIN
     "H",            IDM_FILE_RECENT,            VIRTKEY, ALT, NOINVERT
     "H",            IDM_EDIT_XHTML_UNESCAPE_CHAR,VIRTKEY, SHIFT, ALT, NOINVERT
     "H",            IDM_EDIT_NUM2HEX,           VIRTKEY, CONTROL, ALT, NOINVERT
-    "I",            IDM_EDIT_SPLITLINES,        VIRTKEY, CONTROL, NOINVERT
+    "I",            CMD_MARKDOWN_ITALIC,        VIRTKEY, CONTROL, NOINVERT
     "I",            IDM_FILE_OPENFAV,           VIRTKEY, ALT, NOINVERT
     "I",            IDM_EDIT_TITLECASE,         VIRTKEY, CONTROL, ALT, NOINVERT
     "I",            IDM_VIEW_HIGHLIGHTCURRENTLINE_BACK, VIRTKEY, SHIFT, CONTROL, NOINVERT

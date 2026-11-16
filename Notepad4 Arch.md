@@ -598,7 +598,7 @@ How rows are grouped:
 - **Default layout** (`DefaultToolbarButtons`, `src/Notepad4.cpp:71`): `0 1 27 2 0 22 0 4 18 0 10 11 0 12 0 24 0 13 14 30 0 28 0 31 0 29 0 32 33 34 36 0 37`.
   - Reset Zoom sits after Zoom In/Out; Pretty, Toggle Line Comment and Spell Check each get their own group, Bold, Italic, Code and Link share a group, and Clear Markdown Formatting comes last in its own group. Browse, Save Copy and About are no longer in the default, and Favorites moved after Open/Save (Customize Toolbar can add the others back).
 - **Markdown buttons:** each one wraps the selection in its marker and keeps the original text selected.
-  - Ctrl+B (bold) and Ctrl+I (italic) do the same, but only when pressed as accelerators (`HIWORD(wParam) == 1`) in a Markdown file with a selection; otherwise they run Find Matching Brace / Split Lines as before.
+  - Ctrl+B (`CMD_MARKDOWN_BOLD` 40590) and Ctrl+I (`CMD_MARKDOWN_ITALIC` 40591) do the same in a Markdown document with a selection, and nothing elsewhere. Find Matching Brace and Split Lines no longer have a shortcut.
   - With no selection, they only switch an untitled document to Markdown.
   - With a rectangular selection, they show the standard "not supported" notice.
   - Undo/Redo, Cut/Copy/Paste, Delete, Scheme, Customize Schemes and Exit are no longer in the default; they're still available via Customize Toolbar.

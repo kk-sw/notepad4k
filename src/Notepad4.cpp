@@ -430,13 +430,11 @@ static bool PrepareMarkdownFormat() noexcept {
 	return !SciCall_IsSelectionEmpty();
 }
 
-// Ctrl+B / Ctrl+I: true when the selection of a Markdown document was enclosed with the marker.
-static bool EditMarkdownEncloseSelection(LPCWSTR marker) noexcept {
+// Ctrl+B / Ctrl+I only format a Markdown document, they don't switch a new document to Markdown.
+static void EditMarkdownEncloseSelection(LPCWSTR marker) noexcept {
 	if (pLexCurrent->rid == NP2LEX_MARKDOWN && !SciCall_IsSelectionEmpty()) {
 		EditEncloseSelection(marker, marker);
-		return true;
 	}
-	return false;
 }
 
 // a link target can't span lines, and a triple-click selection includes the line ending.
@@ -3364,10 +3362,6 @@ LRESULT MsgCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
 		break;
 
 	case IDM_EDIT_SPLITLINES:
-		// Ctrl+I: Markdown italic when there is something to format.
-		if (HIWORD(wParam) == 1 && EditMarkdownEncloseSelection(L"_")) {
-			break;
-		}
 		BeginWaitCursor();
 		SciCall_TargetFromSelection();
 		SciCall_LinesSplit(0);
@@ -3632,6 +3626,14 @@ LRESULT MsgCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
 		}
 		break;
 
+	case CMD_MARKDOWN_BOLD:
+		EditMarkdownEncloseSelection(L"**");
+		break;
+
+	case CMD_MARKDOWN_ITALIC:
+		EditMarkdownEncloseSelection(L"_");
+		break;
+
 	case IDT_EDIT_MARKDOWN_LINK:
 		if (PrepareMarkdownFormat()) {
 			EditMarkdownLinkSelection();
@@ -3699,11 +3701,6 @@ LRESULT MsgCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
 		break;
 
 	case IDM_EDIT_FINDMATCHINGBRACE:
-		// Ctrl+B: Markdown bold when there is something to format.
-		if (HIWORD(wParam) == 1 && EditMarkdownEncloseSelection(L"**")) {
-			break;
-		}
-		[[fallthrough]];
 	case IDM_EDIT_SELTOMATCHINGBRACE: {
 		Sci_Position iBrace2 = INVALID_POSITION;
 		Sci_Position iCurPos = SciCall_GetCurrentPos();

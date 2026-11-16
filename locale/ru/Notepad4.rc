@@ -261,7 +261,7 @@ BEGIN
 			MENUITEM "&Удалить строку\tCtrl+Shift+D",						IDM_EDIT_DELETELINE
 			MENUITEM SEPARATOR
 			MENUITEM "&Объединить строки\tCtrl+J",							IDM_EDIT_JOINLINES
-			MENUITEM "&Разделить строки\tCtrl+I",							IDM_EDIT_SPLITLINES
+			MENUITEM "&Разделить строки",							IDM_EDIT_SPLITLINES
 			MENUITEM "Перенос ко&лонок",								IDM_EDIT_COLUMNWRAP
 			MENUITEM "Объединить аб&зацы\tCtrl+Shift+J",						IDM_EDIT_JOINLINESEX
 		END
@@ -368,7 +368,7 @@ BEGIN
 		MENUITEM "&Заменить...\tCtrl+H",								IDM_EDIT_REPLACE
 		MENUITEM "Заменить &далее\tF4",									IDM_EDIT_REPLACENEXT
 		MENUITEM SEPARATOR
-		MENUITEM "Найти парную &скобку\tCtrl+B",							IDM_EDIT_FINDMATCHINGBRACE
+		MENUITEM "Найти парную &скобку",							IDM_EDIT_FINDMATCHINGBRACE
 		MENUITEM "Выделить до парной ско&бки\tCtrl+Shift+B",						IDM_EDIT_SELTOMATCHINGBRACE
 		MENUITEM "Выделить &слово\tCtrl+Alt+Пробел",							IDM_EDIT_SELECTWORD
 		MENUITEM "Выделить ст&роки (расширить выделение)\tCtrl+Shift+Пробел",				IDM_EDIT_SELECTLINE
@@ -888,7 +888,7 @@ BEGIN
     "A",            IDM_EDIT_COPYALL,           VIRTKEY, ALT, NOINVERT
     "A",            IDM_VIEW_FOLD_ALL,          VIRTKEY, SHIFT, ALT, NOINVERT
     "A",            CMD_RELOADANSI,             VIRTKEY, SHIFT, CONTROL, NOINVERT
-    "B",            IDM_EDIT_FINDMATCHINGBRACE, VIRTKEY, CONTROL, NOINVERT
+    "B",            CMD_MARKDOWN_BOLD,         VIRTKEY, CONTROL, NOINVERT
     "B",            IDM_EDIT_MERGEBLANKLINES,   VIRTKEY, ALT, NOINVERT
     "B",            IDM_EDIT_NUM2BIN,           VIRTKEY, CONTROL, ALT, NOINVERT
     "B",            IDM_EDIT_SELTOMATCHINGBRACE,VIRTKEY, SHIFT, CONTROL, NOINVERT
@@ -914,7 +914,7 @@ BEGIN
     "H",            IDM_FILE_RECENT,            VIRTKEY, ALT, NOINVERT
     "H",            IDM_EDIT_XHTML_UNESCAPE_CHAR,VIRTKEY, SHIFT, ALT, NOINVERT
     "H",            IDM_EDIT_NUM2HEX,           VIRTKEY, CONTROL, ALT, NOINVERT
-    "I",            IDM_EDIT_SPLITLINES,        VIRTKEY, CONTROL, NOINVERT
+    "I",            CMD_MARKDOWN_ITALIC,        VIRTKEY, CONTROL, NOINVERT
     "I",            IDM_FILE_OPENFAV,           VIRTKEY, ALT, NOINVERT
     "I",            IDM_EDIT_TITLECASE,         VIRTKEY, CONTROL, ALT, NOINVERT
     "I",            IDM_VIEW_HIGHLIGHTCURRENTLINE_BACK, VIRTKEY, SHIFT, CONTROL, NOINVERT
