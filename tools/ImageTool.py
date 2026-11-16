@@ -270,7 +270,7 @@ def make_notepad4_toolbar_bitmap(size):
 		f'{images}/ResetZoom.png',		# IDT_VIEW_RESETZOOM
 		f'{images}/LineComment.png',	# IDT_EDIT_LINECOMMENT
 		f'{images}/MarkdownBold.png',	# IDT_EDIT_MARKDOWN_BOLD
-		f'{images}/MarkdownUnderline.png',	# IDT_EDIT_MARKDOWN_UNDERLINE
+		f'{images}/MarkdownItalic.png',	# IDT_EDIT_MARKDOWN_ITALIC
 		f'{images}/MarkdownCode.png',	# IDT_EDIT_MARKDOWN_CODE
 		f'{images}/About.png',			# IDT_HELP_ABOUT
 		f'{images}/MarkdownLink.png',	# IDT_EDIT_MARKDOWN_LINK

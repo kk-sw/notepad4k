@@ -573,7 +573,7 @@ How rows are grouped:
 | `tools/starttm.cpp` | Startup-time benchmark |
 | `tools/readme.txt` | Image sourcing and conversion notes |
 | `tools/lang/*` (85) | Keyword/API source lists per language (+ SQL dialects) |
-| `tools/images/**` (60 svg, 319 png) | Source art for toolbar, icons, cursors (+ **[new]** `CodePretty`, `SpellCheck`, `ResetZoom`, `LineComment`, `MarkdownBold`, `MarkdownUnderline`, `MarkdownCode`, `About`, `MarkdownLink`) |
+| `tools/images/**` (60 svg, 319 png) | Source art for toolbar, icons, cursors (+ **[new]** `CodePretty`, `SpellCheck`, `ResetZoom`, `LineComment`, `MarkdownBold`, `MarkdownItalic`, `MarkdownCode`, `About`, `MarkdownLink`) |
 | `wiki/` (0) | Uninitialized wiki submodule |
 
 ---
@@ -588,16 +588,17 @@ How rows are grouped:
 | 29 | 28 `SpellCheck` ("abc" + red squiggle) | `IDT_VIEW_SPELLCHECK` 40628 | split (`BTNS_DROPDOWN`) | Button: toggle spell check; ▾: language list | `EditSpellCheckIsUsable()` (Windows 10+, factory not failed); pressed while on |
 | 30 | 29 `ResetZoom` (magnifier with `=`) | `IDT_VIEW_RESETZOOM` 40629 | button | `SciCall_SetZoom(100)` (same as `IDM_VIEW_RESETZOOM`) | Always |
 | 31 | 30 `LineComment` (green `//` + text lines) | `IDT_EDIT_LINECOMMENT` 40630 | button | `EditToggleCommentLine(false)` (same as `IDM_EDIT_LINECOMMENT`) | Scheme supports line comments (no `LexerAttr_NoLineComment`) |
-| 32 | 31 `MarkdownBold` (bold `B`) | `IDT_EDIT_MARKDOWN_BOLD` 40631 | button | `EditEncloseSelection(L"**", L"**")` | `IsMarkdownFormatAvailable()`: a file loaded from disk with the Markdown scheme |
-| 33 | 32 `MarkdownUnderline` (`U` + blue bar) | `IDT_EDIT_MARKDOWN_UNDERLINE` 40632 | button | `EditEncloseSelection(L"_", L"_")` | Same |
+| 32 | 31 `MarkdownBold` (bold `B`) | `IDT_EDIT_MARKDOWN_BOLD` 40631 | button | `EditEncloseSelection(L"**", L"**")` | `IsMarkdownFormatAvailable()`: an untitled document, or a file with the Markdown scheme. `PrepareMarkdownFormat()` switches an untitled document to Markdown on press |
+| 33 | 32 `MarkdownItalic` (thin Georgia italic `I`) | `IDT_EDIT_MARKDOWN_ITALIC` 40632 | button | `EditEncloseSelection(L"_", L"_")` | Same |
 | 34 | 33 `MarkdownCode` (purple `</>`) | `IDT_EDIT_MARKDOWN_CODE` 40633 | button | ``EditEncloseSelection(L"`", L"`")`` | Same |
 | 35 | 34 `About` (blue info `i`) | `IDT_HELP_ABOUT` 40634 | button | Opens the About dialog (same as Help → About; no keyboard shortcut) | Always |
 | 36 | 35 `MarkdownLink` (blue/grey chain link) | `IDT_EDIT_MARKDOWN_LINK` 40635 | button | `EditEncloseSelection(L"[⇗](", L")")` via `EditMarkdownLinkSelection()`: selection (spaces and line endings trimmed) becomes the link target; does nothing if it spans lines | Same as the other Markdown buttons |
 
 - **Default layout** (`DefaultToolbarButtons`, `src/Notepad4.cpp:71`): `22 3 0 1 27 2 0 4 18 19 0 10 11 0 12 0 24 0 13 14 30 0 28 0 31 0 29 0 32 33 34 36 0 35`.
-  - Reset Zoom sits after Zoom In/Out; Pretty, Toggle Line Comment and Spell Check each get their own group, the four Markdown buttons (Bold, Underline, Code, Link) share a group, and About comes last.
+  - Reset Zoom sits after Zoom In/Out; Pretty, Toggle Line Comment and Spell Check each get their own group, the four Markdown buttons (Bold, Italic, Code, Link) share a group, and About comes last.
 - **Markdown buttons:** each one wraps the selection in its marker and keeps the original text selected.
-  - With no selection, they do nothing.
+  - Ctrl+B (bold) and Ctrl+I (italic) do the same, but only when pressed as accelerators (`HIWORD(wParam) == 1`) in a Markdown file with a selection; otherwise they run Find Matching Brace / Split Lines as before.
+  - With no selection, they only switch an untitled document to Markdown.
   - With a rectangular selection, they show the standard "not supported" notice.
   - Undo/Redo, Cut/Copy/Paste, Delete, Scheme, Customize Schemes and Exit are no longer in the default; they're still available via Customize Toolbar.
   - A layout saved in `Notepad4.ini` overrides the default, so on an existing install the new buttons are added via View → Customize Toolbar.

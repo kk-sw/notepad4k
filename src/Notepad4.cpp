@@ -109,7 +109,7 @@ static const TBBUTTON tbbMainWnd[] =
 	{29, 	IDT_VIEW_RESETZOOM, 	TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, 0},
 	{30, 	IDT_EDIT_LINECOMMENT, 	TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, 0},
 	{31, 	IDT_EDIT_MARKDOWN_BOLD, 	TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, 0},
-	{32, 	IDT_EDIT_MARKDOWN_UNDERLINE, 	TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, 0},
+	{32, 	IDT_EDIT_MARKDOWN_ITALIC, 	TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, 0},
 	{33, 	IDT_EDIT_MARKDOWN_CODE, 	TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, 0},
 	{34, 	IDT_HELP_ABOUT, 	TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, 0},
 	{35, 	IDT_EDIT_MARKDOWN_LINK, 	TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, 0},
@@ -413,8 +413,29 @@ static inline bool IsDocumentModified() noexcept {
 	return bDocumentModified || iCurrentEncoding != iOriginalEncoding;
 }
 
+// a new document can become Markdown, a file from disk must already be one.
 static inline bool IsMarkdownFormatAvailable() noexcept {
-	return pLexCurrent->rid == NP2LEX_MARKDOWN && StrNotEmpty(szCurFile);
+	return StrIsEmpty(szCurFile) || pLexCurrent->rid == NP2LEX_MARKDOWN;
+}
+
+// Markdown toolbar buttons switch a new document to Markdown; true when there is a selection to format.
+static bool PrepareMarkdownFormat() noexcept {
+	if (!IsMarkdownFormatAvailable()) {
+		return false;
+	}
+	if (pLexCurrent->rid != NP2LEX_MARKDOWN) {
+		Style_SetLexerFromID(NP2LEX_MARKDOWN);
+	}
+	return !SciCall_IsSelectionEmpty();
+}
+
+// Ctrl+B / Ctrl+I: true when the selection of a Markdown document was enclosed with the marker.
+static bool EditMarkdownEncloseSelection(LPCWSTR marker) noexcept {
+	if (pLexCurrent->rid == NP2LEX_MARKDOWN && !SciCall_IsSelectionEmpty()) {
+		EditEncloseSelection(marker, marker);
+		return true;
+	}
+	return false;
 }
 
 // a link target can't span lines, and a triple-click selection includes the line ending.
@@ -3342,6 +3363,10 @@ LRESULT MsgCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
 		break;
 
 	case IDM_EDIT_SPLITLINES:
+		// Ctrl+I: Markdown italic when there is something to format.
+		if (HIWORD(wParam) == 1 && EditMarkdownEncloseSelection(L"_")) {
+			break;
+		}
 		BeginWaitCursor();
 		SciCall_TargetFromSelection();
 		SciCall_LinesSplit(0);
@@ -3597,17 +3622,17 @@ LRESULT MsgCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
 		break;
 
 	case IDT_EDIT_MARKDOWN_BOLD:
-	case IDT_EDIT_MARKDOWN_UNDERLINE:
+	case IDT_EDIT_MARKDOWN_ITALIC:
 	case IDT_EDIT_MARKDOWN_CODE:
-		if (IsMarkdownFormatAvailable() && !SciCall_IsSelectionEmpty()) {
+		if (PrepareMarkdownFormat()) {
 			LPCWSTR marker = (LOWORD(wParam) == IDT_EDIT_MARKDOWN_BOLD) ? L"**"
-				: ((LOWORD(wParam) == IDT_EDIT_MARKDOWN_UNDERLINE) ? L"_" : L"`");
+				: ((LOWORD(wParam) == IDT_EDIT_MARKDOWN_ITALIC) ? L"_" : L"`");
 			EditEncloseSelection(marker, marker);
 		}
 		break;
 
 	case IDT_EDIT_MARKDOWN_LINK:
-		if (IsMarkdownFormatAvailable() && !SciCall_IsSelectionEmpty()) {
+		if (PrepareMarkdownFormat()) {
 			EditMarkdownLinkSelection();
 		}
 		break;
@@ -3667,6 +3692,11 @@ LRESULT MsgCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
 		break;
 
 	case IDM_EDIT_FINDMATCHINGBRACE:
+		// Ctrl+B: Markdown bold when there is something to format.
+		if (HIWORD(wParam) == 1 && EditMarkdownEncloseSelection(L"**")) {
+			break;
+		}
+		[[fallthrough]];
 	case IDM_EDIT_SELTOMATCHINGBRACE: {
 		Sci_Position iBrace2 = INVALID_POSITION;
 		Sci_Position iCurPos = SciCall_GetCurrentPos();
@@ -6522,7 +6552,7 @@ void UpdateToolbar() noexcept {
 	EnableTool(IDT_EDIT_LINECOMMENT, !(pLexCurrent->lexerAttr & LexerAttr_NoLineComment));
 	const bool markdownFormat = IsMarkdownFormatAvailable();
 	EnableTool(IDT_EDIT_MARKDOWN_BOLD, markdownFormat);
-	EnableTool(IDT_EDIT_MARKDOWN_UNDERLINE, markdownFormat);
+	EnableTool(IDT_EDIT_MARKDOWN_ITALIC, markdownFormat);
 	EnableTool(IDT_EDIT_MARKDOWN_CODE, markdownFormat);
 	EnableTool(IDT_EDIT_MARKDOWN_LINK, markdownFormat);
 

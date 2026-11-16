@@ -20,7 +20,8 @@ A personal fork of [Notepad4](https://github.com/zufuliu/notepad4), a lightweigh
   - **Spell Check:** turns checking on or off; its ▾ arrow opens the language list.
   - **Reset Zoom:** returns to 100 %.
   - **Toggle Line Comment.**
-  - **Markdown Bold, Underline and Code:** wrap the selected text in `**`, `_` or `` ` ``. They're enabled only for Markdown files opened from disk.
+  - **Markdown Bold, Italic and Code:** wrap the selected text in `**`, `_` or `` ` ``. They're enabled for Markdown files and for new, unsaved documents; pressing one in a new document switches it to the Markdown scheme (so Save suggests `.md`).
+    - Shortcuts: Ctrl+B bold, Ctrl+I italic. Outside a Markdown file, or with nothing selected, the keys keep their usual function (Find Matching Brace, Split Lines).
   - **Markdown Link:** turns the selected text (e.g. a URL) into `[⇗](selected text)`, trimming spaces and line endings; does nothing on a multi-line selection. Same enable rule.
   - **About:** opens the About dialog.
 - **New default toolbar layout:** the new buttons are added and some rarely used ones are removed (they can still be added back).
