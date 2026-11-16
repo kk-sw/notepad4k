@@ -220,6 +220,7 @@ void	EditMoveDown() noexcept;
 void	EditModifyLines(LPCWSTR pwszPrefix, LPCWSTR pwszAppend, bool skipEmptyLine) noexcept;
 void	EditAlignText(EditAlignMode nMode) noexcept;
 void	EditEncloseSelection(LPCWSTR pwszOpen, LPCWSTR pwszClose) noexcept;
+void	EditClearMarkdownFormatting() noexcept;
 void	EditToggleLineComments(LPCWSTR pwszComment, int commentFlag) noexcept;
 void	EditPadWithSpaces(bool bSkipEmpty, bool bNoUndoGroup) noexcept;
 void	EditStripFirstCharacter() noexcept;

@@ -3277,6 +3277,445 @@ void EditEncloseSelection(LPCWSTR pwszOpen, LPCWSTR pwszClose) noexcept {
 
 //=============================================================================
 //
+// EditClearMarkdownFormatting()
+//
+namespace {
+
+constexpr bool IsMarkdownSpace(WCHAR ch) noexcept {
+	return ch == L'\0' || ch == L' ' || ch == L'\t' || ch == L'\r' || ch == L'\n';
+}
+
+constexpr bool IsMarkdownBlank(WCHAR ch) noexcept {
+	return ch == L' ' || ch == L'\t';
+}
+
+constexpr bool IsMarkdownEOL(WCHAR ch) noexcept {
+	return ch == L'\r' || ch == L'\n';
+}
+
+inline bool IsMarkdownAlnum(WCHAR ch) noexcept {
+	return ch != L'\0' && IsCharAlphaNumeric(ch);
+}
+
+constexpr bool IsMarkdownEscapable(WCHAR ch) noexcept {
+	return (ch >= L'!' && ch <= L'/') || (ch >= L':' && ch <= L'@') || (ch >= L'[' && ch <= L'`') || (ch >= L'{' && ch <= L'~');
+}
+
+constexpr int MarkdownEmphasisIndex(WCHAR ch) noexcept {
+	return (ch == L'*') ? 0 : ((ch == L'_') ? 1 : ((ch == L'~') ? 2 : ((ch == L'`') ? 3 : -1)));
+}
+
+// index of the bracket that closes the one at index, on the same line; -1 when there is none.
+int MatchMarkdownBracket(const WCHAR *text, int index, int end, WCHAR open, WCHAR close) noexcept {
+	int depth = 0;
+	for (int i = index; i < end; i++) {
+		const WCHAR ch = text[i];
+		if (ch == L'\\') {
+			++i;
+		} else if (IsMarkdownEOL(ch)) {
+			break;
+		} else if (ch == open) {
+			++depth;
+		} else if (ch == close && --depth == 0) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+// removes inline and heading/quote markup from text[start, end); list and task markers and fenced code are kept.
+// text holds whole lines, so the characters around the range give the flanking context.
+// Emphasis and code spans only pair within one line, so unrelated markers on other lines stay.
+class MarkdownCleaner {
+public:
+	MarkdownCleaner(const WCHAR *text_, int length_, WCHAR *out_) noexcept : text{text_}, length{length_}, out{out_} {}
+
+	int Clean(int start, int end) noexcept {
+		Inline(start, end, true);
+		return count;
+	}
+
+private:
+	static constexpr int MaxDepth = 32;
+	static constexpr int MaxRun = 8;
+	static constexpr int MaxLinkText = 1024;
+	static constexpr int MaxLinkUrl = 4096;
+	struct FailedSearch {
+		int from;
+		int stop;
+		int end;
+	};
+
+	const WCHAR *text;
+	const int length;
+	WCHAR *out;
+	int count = 0;
+	int depth = 0;
+	// a search for a closing run that failed from `from` up to `stop` also fails from any index in between.
+	FailedSearch failed[4][MaxRun + 1]{};
+
+	WCHAR At(int index) const noexcept {
+		return (index >= 0 && index < length) ? text[index] : L'\0';
+	}
+
+	bool IsLineStart(int index) const noexcept {
+		return index == 0 || text[index - 1] == L'\n' || (text[index - 1] == L'\r' && text[index] != L'\n');
+	}
+
+	int LineEnd(int index, int end) const noexcept {
+		while (index < end && !IsMarkdownEOL(text[index])) {
+			++index;
+		}
+		return index;
+	}
+
+	int SkipBlank(int index, int end) const noexcept {
+		while (index < end && IsMarkdownBlank(text[index])) {
+			++index;
+		}
+		return index;
+	}
+
+	int RunEnd(int index, int end) const noexcept {
+		const WCHAR ch = text[index];
+		while (index < end && text[index] == ch) {
+			++index;
+		}
+		return index;
+	}
+
+	void Copy(int start, int end) noexcept {
+		while (start < end) {
+			out[count++] = text[start++];
+		}
+	}
+
+	// ``` or ~~~ fence at line start (up to 3 spaces of indentation): returns the end of the block, else -1.
+	int FencedBlockEnd(int index, int end) const noexcept {
+		const int fence = SkipBlank(index, end);
+		const WCHAR ch = At(fence);
+		if (fence - index > 3 || (ch != L'`' && ch != L'~')) {
+			return -1;
+		}
+		const int run = RunEnd(fence, end) - fence;
+		if (run < 3) {
+			return -1;
+		}
+		int line = LineEnd(fence, end);
+		while (line < end) {
+			line += (text[line] == L'\r' && At(line + 1) == L'\n') ? 2 : 1;
+			const int close = SkipBlank(line, end);
+			const int lineEnd = LineEnd(line, end);
+			if (close - line <= 3 && At(close) == ch && RunEnd(close, end) - close >= run && SkipBlank(RunEnd(close, end), end) == lineEnd) {
+				return lineEnd;
+			}
+			line = lineEnd;
+		}
+		return end;
+	}
+
+	// end of the heading text before the optional closing "#" sequence, which must follow a space.
+	int HeadingContentEnd(int index, int lineEnd) const noexcept {
+		int tail = lineEnd;
+		while (tail > index && IsMarkdownBlank(text[tail - 1])) {
+			--tail;
+		}
+		int hashes = tail;
+		while (hashes > index && text[hashes - 1] == L'#') {
+			--hashes;
+		}
+		if (hashes != tail && (hashes == index || IsMarkdownBlank(text[hashes - 1]))) {
+			tail = hashes;
+			while (tail > index && IsMarkdownBlank(text[tail - 1])) {
+				--tail;
+			}
+		}
+		return tail;
+	}
+
+	// strips quote and heading markers, copies list and task markers; returns the first index still to process.
+	int LineStart(int index, int end) noexcept {
+		const int fenceEnd = FencedBlockEnd(index, end);
+		if (fenceEnd >= 0) {
+			Copy(index, fenceEnd);
+			return fenceEnd;
+		}
+
+		int pos = index;
+		bool quote = false;
+		while (true) {
+			int next = SkipBlank(pos, end);
+			if (next < end && text[next] == L'>') {
+				++next;
+				if (next < end && text[next] == L' ') {
+					++next;
+				}
+				pos = next;
+				quote = true;
+			} else {
+				break;
+			}
+		}
+
+		const int hash = SkipBlank(pos, end);
+		const int hashEnd = (At(hash) == L'#') ? RunEnd(hash, end) : hash;
+		if (hashEnd != hash && hashEnd - hash <= 6 && (quote || hash - pos <= 3) && IsMarkdownSpace(At(hashEnd))) {
+			const int lineEnd = LineEnd(hashEnd, length);
+			const int contentStart = SkipBlank(hashEnd, end);
+			const int contentEnd = min(HeadingContentEnd(contentStart, lineEnd), end);
+			if (contentStart < contentEnd) {
+				Inline(contentStart, contentEnd, false);
+			}
+			return min(lineEnd, end);
+		}
+
+		if (!quote) {
+			const int indent = SkipBlank(pos, end);
+			Copy(pos, indent);
+			pos = indent;
+		}
+		int marker = pos;
+		if (marker < end && (text[marker] == L'-' || text[marker] == L'+' || text[marker] == L'*')) {
+			++marker;
+		} else {
+			while (marker < end && text[marker] >= L'0' && text[marker] <= L'9') {
+				++marker;
+			}
+			if (marker == pos || marker - pos > 9 || marker >= end || (text[marker] != L'.' && text[marker] != L')')) {
+				return pos;
+			}
+			++marker;
+		}
+		if (marker < end && IsMarkdownBlank(text[marker])) {
+			++marker;
+			const WCHAR box = At(marker + 1);
+			if (At(marker) == L'[' && At(marker + 2) == L']' && (box == L' ' || box == L'x' || box == L'X') && marker + 3 <= end) {
+				marker += 3;
+			}
+			Copy(pos, marker);
+			return marker;
+		}
+		return pos;
+	}
+
+	// [text](url) or ![alt](url) starting at the '[' at index; returns the index after ')' or -1.
+	int Link(int index, int end) noexcept {
+		// bounded scans keep a long line full of unmatched '[' fast.
+		const int closeBracket = MatchMarkdownBracket(text, index, min(end, index + MaxLinkText), L'[', L']');
+		if (closeBracket < 0 || closeBracket + 1 >= end || text[closeBracket + 1] != L'(') {
+			return -1;
+		}
+		const int closeParen = MatchMarkdownBracket(text, closeBracket + 1, min(end, closeBracket + 1 + MaxLinkUrl), L'(', L')');
+		if (closeParen < 0) {
+			return -1;
+		}
+		int textStart = index + 1;
+		int textEnd = closeBracket;
+		while (textStart < textEnd && IsMarkdownSpace(text[textStart])) {
+			++textStart;
+		}
+		while (textEnd > textStart && IsMarkdownSpace(text[textEnd - 1])) {
+			--textEnd;
+		}
+		if (textStart == textEnd || (textEnd - textStart == 1 && text[textStart] == L'⇗')) {
+			int urlStart = closeBracket + 2;
+			while (urlStart < closeParen && IsMarkdownSpace(text[urlStart])) {
+				++urlStart;
+			}
+			int urlEnd = urlStart;
+			if (urlStart < closeParen && text[urlStart] == L'<') {
+				++urlStart;
+				urlEnd = urlStart;
+				while (urlEnd < closeParen && text[urlEnd] != L'>') {
+					++urlEnd;
+				}
+			} else {
+				while (urlEnd < closeParen && !IsMarkdownSpace(text[urlEnd])) {
+					++urlEnd;
+				}
+			}
+			Copy(urlStart, urlEnd);
+		} else {
+			Inline(textStart, textEnd, false);
+		}
+		return closeParen + 1;
+	}
+
+	// a closing run of the same character and length on the same line; '_' must not be followed by a letter or digit.
+	// backslash escapes and nested code spans don't apply inside a code span.
+	int ClosingRun(int index, int end, WCHAR ch, int run) noexcept {
+		FailedSearch &cache = failed[MarkdownEmphasisIndex(ch)][run];
+		if (cache.end == end && cache.from != 0 && index >= cache.from && index <= cache.stop) {
+			return -1;
+		}
+		int i = index;
+		for (; i < end && !IsMarkdownEOL(text[i]); i++) {
+			if (ch != L'`') {
+				if (text[i] == L'\\') {
+					++i;
+					continue;
+				}
+				if (text[i] == L'`') {
+					const int codeEnd = RunEnd(i, end);
+					const int codeRun = codeEnd - i;
+					const int close = (codeRun <= MaxRun) ? ClosingRun(codeEnd, end, L'`', codeRun) : -1;
+					i = ((close >= 0) ? close + codeRun : codeEnd) - 1;
+					continue;
+				}
+			}
+			if (text[i] == ch) {
+				const int runEnd = RunEnd(i, end);
+				if (runEnd - i == run && (ch == L'`' || (!IsMarkdownSpace(text[i - 1]) && (ch != L'_' || !IsMarkdownAlnum(At(runEnd)))))) {
+					return i;
+				}
+				i = runEnd - 1;
+			}
+		}
+		cache = {index, min(i, end), end};
+		return -1;
+	}
+
+	void Inline(int start, int end, bool lines) noexcept {
+		if (depth == MaxDepth) {
+			Copy(start, end);
+			return;
+		}
+		++depth;
+		int i = start;
+		if (lines && IsLineStart(i)) {
+			i = LineStart(i, end);
+		}
+		while (i < end) {
+			const WCHAR ch = text[i];
+			const int emphasis = MarkdownEmphasisIndex(ch);
+			if (IsMarkdownEOL(ch)) {
+				out[count++] = ch;
+				++i;
+				if (lines && i < end && IsLineStart(i)) {
+					i = LineStart(i, end);
+				}
+			} else if (ch == L'\\' && i + 1 < end && IsMarkdownEscapable(text[i + 1])) {
+				out[count++] = text[i + 1];
+				i += 2;
+			} else if (emphasis >= 0) {
+				const int runEnd = RunEnd(i, end);
+				const int run = runEnd - i;
+				bool opening = run <= MaxRun && (ch == L'`' || (!IsMarkdownSpace(At(runEnd)) && (ch != L'~' || run == 2)));
+				if (ch == L'_' && IsMarkdownAlnum(At(i - 1))) {
+					opening = false;
+				}
+				const int close = opening ? ClosingRun(runEnd, end, ch, run) : -1;
+				if (close < 0) {
+					Copy(i, runEnd);
+				} else if (ch == L'`') {
+					int codeStart = runEnd;
+					int codeEnd = close;
+					if (codeEnd - codeStart >= 2 && text[codeStart] == L' ' && text[codeEnd - 1] == L' ') {
+						++codeStart;
+						--codeEnd;
+					}
+					Copy(codeStart, codeEnd);
+				} else {
+					Inline(runEnd, close, false);
+				}
+				i = (close < 0) ? runEnd : close + run;
+			} else if (ch == L'[' || (ch == L'!' && i + 1 < end && text[i + 1] == L'[')) {
+				const int linkEnd = Link(i + (ch == L'!'), end);
+				if (linkEnd >= 0) {
+					i = linkEnd;
+				} else {
+					out[count++] = ch;
+					++i;
+				}
+			} else {
+				out[count++] = ch;
+				++i;
+			}
+		}
+		--depth;
+	}
+};
+
+// grows the selection over markers that enclose it: **beta**, [text](url), "# " or "> " before it.
+void ExpandMarkdownSelection(const WCHAR *text, int length, int &start, int &end) noexcept {
+	for (int pass = 0; pass < 2; pass++) {
+		while (start > 0 && end < length && text[start - 1] == text[end] && MarkdownEmphasisIndex(text[end]) >= 0) {
+			--start;
+			++end;
+		}
+		if (start > 0 && text[start - 1] == L'[' && end + 1 < length && text[end] == L']' && text[end + 1] == L'(') {
+			const int close = MatchMarkdownBracket(text, end + 1, length, L'(', L')');
+			if (close >= 0) {
+				start -= (start > 1 && text[start - 2] == L'!') ? 2 : 1;
+				end = close + 1;
+			}
+		}
+	}
+	int lineStart = start;
+	while (lineStart > 0 && !IsMarkdownEOL(text[lineStart - 1])) {
+		--lineStart;
+	}
+	bool prefix = lineStart < start;
+	for (int i = lineStart; i < start && prefix; i++) {
+		prefix = IsMarkdownBlank(text[i]) || text[i] == L'>' || text[i] == L'#';
+	}
+	if (prefix) {
+		start = lineStart;
+	}
+}
+
+}
+
+void EditClearMarkdownFormatting() noexcept {
+	if (SciCall_IsRectangularSelection()) {
+		NotifyRectangularSelection();
+		return;
+	}
+	const Sci_Position iSelStart = SciCall_GetSelectionStart();
+	const Sci_Position iSelEnd = SciCall_GetSelectionEnd();
+	const Sci_Position iLineStart = SciCall_PositionFromLine(SciCall_LineFromPosition(iSelStart));
+	const Sci_Position iLineEnd = SciCall_GetLineEndPosition(SciCall_LineFromPosition(iSelEnd));
+	if (iSelStart == iSelEnd || iLineEnd <= iLineStart || iLineEnd - iLineStart >= INT_MAX / 4) {
+		return;
+	}
+
+	BeginWaitCursor();
+	const int cbText = static_cast<int>(iLineEnd - iLineStart);
+	const UINT cpEdit = GetDocumentCodePage();
+	const char *pszText = SciCall_GetRangePointer(iLineStart, cbText);
+	WCHAR *pwchText = static_cast<WCHAR *>(NP2HeapAlloc(sizeof(WCHAR) * (2 * (cbText + 1))));
+	WCHAR *pwchOut = pwchText + cbText + 1;
+	// invalid bytes would not survive the round trip, and they would shift the positions below.
+	const int cchText = MultiByteToWideChar(cpEdit, MB_ERR_INVALID_CHARS, pszText, cbText, pwchText, cbText);
+	const int cchBefore = MultiByteToWideChar(cpEdit, MB_ERR_INVALID_CHARS, pszText, static_cast<int>(iSelStart - iLineStart), nullptr, 0);
+	const int cchSelection = MultiByteToWideChar(cpEdit, MB_ERR_INVALID_CHARS, pszText + (iSelStart - iLineStart), static_cast<int>(iSelEnd - iSelStart), nullptr, 0);
+	if (cchText > 0 && cchSelection > 0 && (cchBefore > 0 || iSelStart == iLineStart) && cchBefore + cchSelection <= cchText) {
+		int start = cchBefore;
+		int end = cchBefore + cchSelection;
+		ExpandMarkdownSelection(pwchText, cchText, start, end);
+		MarkdownCleaner cleaner{pwchText, cchText, pwchOut};
+		const int cchOut = cleaner.Clean(start, end);
+
+		if (cchOut != end - start || memcmp(pwchOut, pwchText + start, sizeof(WCHAR) * cchOut) != 0) {
+			const int cbStart = WideCharToMultiByte(cpEdit, 0, pwchText, start, nullptr, 0, nullptr, nullptr);
+			const int cbEnd = WideCharToMultiByte(cpEdit, 0, pwchText, end, nullptr, 0, nullptr, nullptr);
+			const int cbOut = WideCharToMultiByte(cpEdit, 0, pwchOut, cchOut, nullptr, 0, nullptr, nullptr);
+			char *pszOut = static_cast<char *>(NP2HeapAlloc(cbOut + 1));
+			WideCharToMultiByte(cpEdit, 0, pwchOut, cchOut, pszOut, cbOut, nullptr, nullptr);
+			SciCall_BeginUndoAction();
+			SciCall_SetTargetRange(iLineStart + cbStart, iLineStart + cbEnd);
+			SciCall_ReplaceTarget(cbOut, pszOut);
+			SciCall_EndUndoAction();
+			SciCall_SetSel(iLineStart + cbStart, iLineStart + cbStart + cbOut);
+			NP2HeapFree(pszOut);
+		}
+	}
+	NP2HeapFree(pwchText);
+	EndWaitCursor();
+}
+
+//=============================================================================
+//
 // EditToggleLineComments()
 //
 void EditToggleLineComments(LPCWSTR pwszComment, int commentFlag) noexcept {

@@ -23,6 +23,7 @@ A personal fork of [Notepad4](https://github.com/zufuliu/notepad4), a lightweigh
   - **Markdown Bold, Italic and Code:** wrap the selected text in `**`, `_` or `` ` ``. They're enabled for Markdown files and for new, unsaved documents; pressing one in a new document switches it to the Markdown scheme (so Save suggests `.md`).
     - Shortcuts: Ctrl+B bold, Ctrl+I italic. Outside a Markdown file, or with nothing selected, the keys keep their usual function (Find Matching Brace, Split Lines).
   - **Markdown Link:** turns the selected text (e.g. a URL) into `[⇗](selected text)`, trimming spaces and line endings; does nothing on a multi-line selection. Same enable rule.
+  - **Clear Markdown Formatting:** removes Markdown from the selection: bold, italic, strikethrough, inline code, links (keeping the text, or the URL for `[⇗](url)`), images, escapes, headings and quotes. List and task markers are kept; markers right around the selection are removed too.
   - **About:** opens the About dialog.
 - **New default toolbar layout:** the new buttons are added and some rarely used ones are removed (they can still be added back).
   - An existing `Notepad4.ini` keeps its saved layout. Use View → Customize Toolbar to add the new buttons.

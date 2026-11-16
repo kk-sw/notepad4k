@@ -1869,6 +1869,7 @@ BEGIN
     IDT_EDIT_MARKDOWN_CODE  "Markdown Inline Code (`)"
     IDT_HELP_ABOUT          "О программе"
     IDT_EDIT_MARKDOWN_LINK  "Markdown Link [⇗](...)"
+    IDT_EDIT_MARKDOWN_CLEAR "Clear Markdown Formatting"
 END
 
 STRINGTABLE

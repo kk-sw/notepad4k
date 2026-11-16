@@ -573,7 +573,7 @@ How rows are grouped:
 | `tools/starttm.cpp` | Startup-time benchmark |
 | `tools/readme.txt` | Image sourcing and conversion notes |
 | `tools/lang/*` (85) | Keyword/API source lists per language (+ SQL dialects) |
-| `tools/images/**` (60 svg, 319 png) | Source art for toolbar, icons, cursors (+ **[new]** `CodePretty`, `SpellCheck`, `ResetZoom`, `LineComment`, `MarkdownBold`, `MarkdownItalic`, `MarkdownCode`, `About`, `MarkdownLink`) |
+| `tools/images/**` (61 svg, 324 png) | Source art for toolbar, icons, cursors (+ **[new]** `CodePretty`, `SpellCheck`, `ResetZoom`, `LineComment`, `MarkdownBold`, `MarkdownItalic`, `MarkdownCode`, `About`, `MarkdownLink`, `MarkdownClear`) |
 | `wiki/` (0) | Uninitialized wiki submodule |
 
 ---
@@ -593,9 +593,10 @@ How rows are grouped:
 | 34 | 33 `MarkdownCode` (purple `</>`) | `IDT_EDIT_MARKDOWN_CODE` 40633 | button | ``EditEncloseSelection(L"`", L"`")`` | Same |
 | 35 | 34 `About` (blue info `i`) | `IDT_HELP_ABOUT` 40634 | button | Opens the About dialog (same as Help → About; no keyboard shortcut) | Always |
 | 36 | 35 `MarkdownLink` (blue/grey chain link) | `IDT_EDIT_MARKDOWN_LINK` 40635 | button | `EditEncloseSelection(L"[⇗](", L")")` via `EditMarkdownLinkSelection()`: selection (spaces and line endings trimmed) becomes the link target; does nothing if it spans lines | Same as the other Markdown buttons |
+| 37 | 36 `MarkdownClear` (eraser on a blue line) | `IDT_EDIT_MARKDOWN_CLEAR` 40636 | button | `EditClearMarkdownFormatting()` (`src/Edit.cpp`): expands the selection over enclosing markers, then strips inline and heading/quote Markdown; list/task markers and unpaired markers stay | Same as the other Markdown buttons |
 
-- **Default layout** (`DefaultToolbarButtons`, `src/Notepad4.cpp:71`): `22 3 0 1 27 2 0 4 18 19 0 10 11 0 12 0 24 0 13 14 30 0 28 0 31 0 29 0 32 33 34 36 0 35`.
-  - Reset Zoom sits after Zoom In/Out; Pretty, Toggle Line Comment and Spell Check each get their own group, the four Markdown buttons (Bold, Italic, Code, Link) share a group, and About comes last.
+- **Default layout** (`DefaultToolbarButtons`, `src/Notepad4.cpp:71`): `0 1 27 2 0 22 0 4 18 0 10 11 0 12 0 24 0 13 14 30 0 28 0 31 0 29 0 32 33 34 36 0 37`.
+  - Reset Zoom sits after Zoom In/Out; Pretty, Toggle Line Comment and Spell Check each get their own group, Bold, Italic, Code and Link share a group, and Clear Markdown Formatting comes last in its own group. Browse, Save Copy and About are no longer in the default, and Favorites moved after Open/Save (Customize Toolbar can add the others back).
 - **Markdown buttons:** each one wraps the selection in its marker and keeps the original text selected.
   - Ctrl+B (bold) and Ctrl+I (italic) do the same, but only when pressed as accelerators (`HIWORD(wParam) == 1`) in a Markdown file with a selection; otherwise they run Find Matching Brace / Split Lines as before.
   - With no selection, they only switch an untitled document to Markdown.
