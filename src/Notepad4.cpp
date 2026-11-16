@@ -3810,6 +3810,19 @@ LRESULT MsgCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
 			break;
 		}
 
+		// F3 / Shift+F3 search for newly selected text.
+		if ((LOWORD(wParam) == IDM_EDIT_FINDNEXT || LOWORD(wParam) == IDM_EDIT_FINDPREV)
+			&& !SciCall_IsSelectionEmpty() && !SciCall_IsRectangularSelection()
+			&& SciCall_GetSelTextLength() < NP2_FIND_REPLACE_LIMIT_SEL && !EditSelectionIsFindMatch(efrData)) {
+			EditSaveSelectionAsFindText(efrData, (LOWORD(wParam) == IDM_EDIT_FINDNEXT) ? CMD_FINDNEXTSEL : CMD_FINDPREVSEL, true);
+			if (hDlgFindReplace != nullptr) {
+				SetDlgItemText(hDlgFindReplace, IDC_FINDTEXT, efrData.wszFind);
+				CheckDlgButton(hDlgFindReplace, IDC_FINDREGEXP, BST_UNCHECKED);
+				CheckDlgButton(hDlgFindReplace, IDC_FINDTRANSFORMBS, BST_UNCHECKED);
+			}
+			break;
+		}
+
 		if (!efrData.HasFindText() && LOWORD(wParam) != IDM_EDIT_REPLACENEXT) {
 			EditSaveSelectionAsFindText(efrData, IDM_EDIT_SAVEFIND, false);
 			if (!efrData.HasFindText()) {

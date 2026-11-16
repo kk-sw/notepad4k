@@ -5067,6 +5067,18 @@ void EditSaveSelectionAsFindText(EditFindReplace &efr, int menu, bool findSelect
 	}
 }
 
+// true when the selection is exactly a match of the current find text, e.g. selected by the previous F3,
+// so repeating F3 keeps a regex or escaped search instead of searching for the matched text.
+bool EditSelectionIsFindMatch(EditFindReplace &efr) noexcept {
+	if (!efr.HasFindText() || !efr.Prepare(FindReplaceStatus_FindUpdated)) {
+		return false;
+	}
+	const Sci_Position iSelStart = SciCall_GetSelectionStart();
+	const Sci_Position iSelEnd = SciCall_GetSelectionEnd();
+	Sci_TextToFindFull ttf = { { iSelStart, iSelEnd }, efr.szFind, efr.findTextLength, { 0, 0 } };
+	return SciCall_FindTextFull(efr.searchFlags, &ttf) == iSelStart && ttf.chrgText.cpMax == iSelEnd;
+}
+
 namespace {
 
 NP2_noinline

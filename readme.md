@@ -30,6 +30,8 @@ A personal fork of [Notepad4](https://github.com/zufuliu/notepad4), a lightweigh
 - **Default save location:** Settings → Default Save Location... sets the folder where Save and Save As start for a file that hasn't been saved yet.
   - The dialog shows the current value; "..." browses for a folder; leave it empty to turn it off.
   - It's stored as `[Settings2] DefaultDirectory` and also used by File → Open when no file is loaded.
+- **F3 / Shift+F3 search for the selection:** with text selected, F3 and Shift+F3 search for that text (like Ctrl+F3).
+  - Repeating F3 on a match keeps the current search, so regex searches continue; the Find dialog shows the new text.
 - **Suggested file name:** for a file that hasn't been saved yet, the Save dialog proposes a name made of the text's first 5 words.
   - Whitespace and punctuation are skipped, e.g. `# Meeting notes, budget` → `Meeting notes budget.txt`.
   - It stops at 80 characters; a reserved device name such as `CON` is never proposed.

@@ -243,6 +243,7 @@ void	EditGetExcerpt(LPWSTR lpszExcerpt, DWORD cchExcerpt) noexcept;
 void	EditSelectWord() noexcept;
 void	EditSelectLines(bool currentBlock, bool lineSelection) noexcept;
 void	EditSaveSelectionAsFindText(EditFindReplace &efr, int menu, bool findSelection) noexcept;
+bool	EditSelectionIsFindMatch(EditFindReplace &efr) noexcept;
 HWND	EditFindReplaceDlg(HWND hwnd, EditFindReplace &efr, bool bReplace) noexcept;
 void	EditFindNext(EditFindReplace &efr, bool fExtendSelection) noexcept;
 void	EditFindPrev(EditFindReplace &efr, bool fExtendSelection) noexcept;
