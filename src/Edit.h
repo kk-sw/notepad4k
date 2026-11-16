@@ -286,7 +286,10 @@ void	EditDumpDocumentStyledText(LPCWSTR lpszFile);
 void	EditFormatCode(int menu) noexcept;
 
 enum {
-	MarkerNumber_Bookmark = 0,
+	MarkerNumber_Bookmark = 0,			// set and removed by the user only
+	MarkerNumber_OccurrenceMark = 1,	// Mark Occurrences, until the next marking
+	MarkerNumber_FindMark = 2,			// F3 / Shift+F3, until the next F3
+	MarkerNumber_FindAllMark = 3,		// Find All, until the next Find All
 
 	// [0, INDICATOR_CONTAINER) are reserved for lexer.
 	IndicatorNumber_MarkOccurrence = INDICATOR_CONTAINER + 0,
@@ -300,6 +303,7 @@ enum {
 	MarginNumber_CodeFolding = 2,
 
 	MarkerBitmask_Bookmark = 1 << MarkerNumber_Bookmark,
+	MarkerBitmask_AnyBookmark = MarkerBitmask_Bookmark | (1 << MarkerNumber_OccurrenceMark) | (1 << MarkerNumber_FindMark) | (1 << MarkerNumber_FindAllMark),
 };
 
 enum {
@@ -313,7 +317,6 @@ enum {
 struct EditMarkAll {
 	bool pending;
 	bool ignoreSelectionUpdate;
-	bool bookmarkForFindAll;
 	UINT markFlag;
 	int incrementSize;			// increment search size
 	Sci_Position textLength;	// length for pszText

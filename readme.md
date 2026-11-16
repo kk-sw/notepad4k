@@ -55,7 +55,7 @@ A personal fork of [Notepad4](https://github.com/zufuliu/notepad4), a lightweigh
 
 - When F3 takes the selection as the search text, it searches plain text: Regex, Wildcard search and Transform backslashes are turned off, while Match Case and Whole Word are kept.
 - The Find dialog, when open, shows the new search text.
-- With the Find dialog's "Bookmark matched line" ticked, F3 / Shift+F3 also bookmark the line of each match they find.
+- With the Find dialog's "Bookmark matched line" ticked, F3 / Shift+F3 mark the line of every match they find until the search text changes (see [Bookmarks](#bookmarks)).
 - Column selections and selections of 1 MB or more are not used as search text.
 - Filling the Find dialog from the selection also needs Settings → Select and Edit Options → Copy Selection as Find Text (on by default).
 
@@ -77,6 +77,22 @@ A personal fork of [Notepad4](https://github.com/zufuliu/notepad4), a lightweigh
 | Find Next / Find Previous buttons | same as F3 / Shift+F3, but they don't bookmark | ➖ |
 | Find All, Select All | ❌ not part of F3 | ❌ |
 | Clear History, Goto Replace, Save / Reset Position | ➖ dialog only | ➖ |
+
+## Bookmarks
+
+Four kinds of bookmark share the bookmark margin; the automatic ones never touch your own.
+
+| Kind | Created by | Removed when | Margin symbol |
+|---|---|---|---|
+| User | Ctrl+F2, margin click | you remove it (Ctrl+F2, margin click, Alt+F2) | green ribbon, left half |
+| Mark Occurrences | View → Mark Occurrences → Bookmark Matched Line | the next marking replaces it | orange dot, top right |
+| F3 | F3 / Shift+F3 with the Find dialog's "Bookmark matched line" ticked | the search text changes (every match found so far stays marked) | blue dot, middle right |
+| Find All | Find All / Select All with "Bookmark matched line" ticked | the next Find All | purple dot, bottom right |
+
+- F2 / Shift+F2 and Select All Bookmarks go through all four kinds; Alt+F2 (Clear Bookmarks) removes all four.
+- Ctrl+F2 on a line with only an automatic mark adds a user bookmark.
+- Each kind has its own place in the margin, so all four stay visible on one line; the symbols follow the zoom.
+- Without the bookmark margin, the automatic kinds show as a fainter line background than user bookmarks.
 
 ## Build
 

@@ -1020,6 +1020,18 @@ inline void SciCall_MarkerDefinePixmap(int markerNumber, const char *pixmap) noe
 	SciCall(SCI_MARKERDEFINEPIXMAP, markerNumber, AsInteger<LPARAM>(pixmap));
 }
 
+inline void SciCall_MarkerDefineRGBAImage(int markerNumber, const uint8_t *pixels) noexcept {
+	SciCall(SCI_MARKERDEFINERGBAIMAGE, markerNumber, AsInteger<LPARAM>(pixels));
+}
+
+inline void SciCall_RGBAImageSetWidth(int width) noexcept {
+	SciCall(SCI_RGBAIMAGESETWIDTH, width, 0);
+}
+
+inline void SciCall_RGBAImageSetHeight(int height) noexcept {
+	SciCall(SCI_RGBAIMAGESETHEIGHT, height, 0);
+}
+
 inline int SciCall_MarkerSymbolDefined(int markerNumber) noexcept {
 	return static_cast<int>(SciCall(SCI_MARKERSYMBOLDEFINED, markerNumber, 0));
 }

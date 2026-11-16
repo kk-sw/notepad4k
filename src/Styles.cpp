@@ -3122,12 +3122,91 @@ void Style_SetIndentGuides(bool bShow) noexcept {
 	SciCall_SetIndentationGuides(iIndentView);
 }
 
+// each bookmark kind has its own place in the margin cell, so all four stay visible on one line:
+// the user bookmark is a ribbon on the left, the automatic kinds are coloured dots stacked on the right.
+namespace {
+
+struct AutoBookmarkKind {
+	int marker;
+	COLORREF color;
+	int row;	// 0 = top, 1 = middle, 2 = bottom of the right half
+};
+
+constexpr AutoBookmarkKind AutoBookmarkKinds[] = {
+	{ MarkerNumber_OccurrenceMark, RGB(0xE0, 0x8A, 0x00), 0 },
+	{ MarkerNumber_FindMark, RGB(0x1F, 0x6F, 0xBF), 1 },
+	{ MarkerNumber_FindAllMark, RGB(0x8E, 0x44, 0xAD), 2 },
+};
+
+constexpr int AutoBookmarkLineAlpha = 0x30;
+
+// 4x4 supersampled coverage gives smooth edges at any zoom.
+template <typename Inside>
+void FillBookmarkShape(uint8_t *pixels, int width, int height, COLORREF color, Inside inside) noexcept {
+	for (int y = 0; y < height; y++) {
+		for (int x = 0; x < width; x++) {
+			int coverage = 0;
+			for (int sy = 0; sy < 4; sy++) {
+				for (int sx = 0; sx < 4; sx++) {
+					coverage += inside(x + (sx + 0.5) / 4.0, y + (sy + 0.5) / 4.0);
+				}
+			}
+			if (coverage != 0) {
+				uint8_t *pixel = pixels + 4*(y*width + x);
+				pixel[0] = GetRValue(color);
+				pixel[1] = GetGValue(color);
+				pixel[2] = GetBValue(color);
+				pixel[3] = static_cast<uint8_t>(coverage*255/16);
+			}
+		}
+	}
+}
+
+void DefineBookmarkImages(COLORREF userColor) noexcept {
+	const int height = max<int>(SciCall_TextHeight(), 8);
+	const int width = max<int>(SciCall_GetMarginWidth(MarginNumber_Bookmark), height - 2);
+	const size_t size = 4*static_cast<size_t>(width)*height;
+	uint8_t *pixels = static_cast<uint8_t *>(NP2HeapAlloc(size));
+	SciCall_RGBAImageSetWidth(width);
+	SciCall_RGBAImageSetHeight(height);
+
+	const double left = width*0.08;
+	const double right = width*0.52;
+	const double top = height*0.10;
+	const double bottom = height*0.90;
+	const double middle = (left + right)/2;
+	const double notch = (right - left)*0.55;
+	FillBookmarkShape(pixels, width, height, userColor, [=](double x, double y) noexcept {
+		if (x < left || x > right || y < top || y > bottom) {
+			return false;
+		}
+		// the V cut at the bottom of the ribbon.
+		const double depth = notch*(1.0 - std::abs(x - middle)/(middle - left));
+		return y <= bottom - depth;
+	});
+	SciCall_MarkerDefineRGBAImage(MarkerNumber_Bookmark, pixels);
+
+	const double radius = min(width*0.19, height*0.15);
+	const double cx = width*0.78;
+	for (const auto &kind : AutoBookmarkKinds) {
+		memset(pixels, 0, size);
+		const double cy = height*(0.20 + 0.30*kind.row);
+		FillBookmarkShape(pixels, width, height, kind.color, [=](double x, double y) noexcept {
+			return (x - cx)*(x - cx) + (y - cy)*(y - cy) <= radius*radius;
+		});
+		SciCall_MarkerDefineRGBAImage(kind.marker, pixels);
+	}
+	NP2HeapFree(pixels);
+}
+
+}
+
 void Style_SetBookmark() noexcept {
 	if (!bBookmarkColorUpdated) {
 #if BookmarkUsingPixmapImage
 		const int marker = bShowBookmarkMargin ? SC_MARK_PIXMAP : SC_MARK_BACKGROUND;
 #else
-		const int marker = bShowBookmarkMargin ? SC_MARK_VERTICALBOOKMARK : SC_MARK_BACKGROUND;
+		const int marker = bShowBookmarkMargin ? SC_MARK_RGBAIMAGE : SC_MARK_BACKGROUND;
 #endif
 		const int markType = SciCall_MarkerSymbolDefined(MarkerNumber_Bookmark);
 		if (marker == markType) {
@@ -3141,15 +3220,10 @@ void Style_SetBookmark() noexcept {
 		if (!Style_StrGetForeColor(szValue, &iBookmarkImageColor)) {
 			iBookmarkImageColor = BookmarkImageDefaultColor;
 		}
+		DefineBookmarkImages(iBookmarkImageColor & 0xffffff);
 #if BookmarkUsingPixmapImage
 		sprintf(bookmark_pixmap_color, bookmark_pixmap_color_fmt, iBookmarkImageColor);
 		SciCall_MarkerDefinePixmap(MarkerNumber_Bookmark, bookmark_pixmap);
-#else
-		iBookmarkImageColor = ColorAlpha(iBookmarkImageColor, SC_ALPHA_OPAQUE);
-		SciCall_MarkerSetBackTranslucent(MarkerNumber_Bookmark, iBookmarkImageColor);
-		// set same color to avoid showing edge.
-		SciCall_MarkerSetForeTranslucent(MarkerNumber_Bookmark, iBookmarkImageColor);
-		SciCall_MarkerDefine(MarkerNumber_Bookmark, SC_MARK_VERTICALBOOKMARK);
 #endif
 	} else {
 		COLORREF iBookmarkLineColor;
@@ -3164,8 +3238,21 @@ void Style_SetBookmark() noexcept {
 		SciCall_MarkerSetBackTranslucent(MarkerNumber_Bookmark, iBookmarkLineColor);
 		SciCall_MarkerSetLayer(MarkerNumber_Bookmark, SC_LAYER_OVER_TEXT);
 		SciCall_MarkerDefine(MarkerNumber_Bookmark, SC_MARK_BACKGROUND);
+		for (const auto &kind : AutoBookmarkKinds) {
+			SciCall_MarkerSetBackTranslucent(kind.marker, ColorAlpha(kind.color, AutoBookmarkLineAlpha));
+			SciCall_MarkerSetLayer(kind.marker, SC_LAYER_OVER_TEXT);
+			SciCall_MarkerDefine(kind.marker, SC_MARK_BACKGROUND);
+		}
 	}
 	bBookmarkColorUpdated = false;
+}
+
+// the margin images are drawn for the current line height, so redraw them after zooming or a font change.
+void Style_UpdateBookmarkImages() noexcept {
+	if (bShowBookmarkMargin && SciCall_MarkerSymbolDefined(MarkerNumber_Bookmark) != SC_MARK_CIRCLE) {
+		bBookmarkColorUpdated = true;
+		Style_SetBookmark();
+	}
 }
 
 void UpdateFoldMarginWidth() noexcept {

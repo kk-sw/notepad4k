@@ -416,12 +416,22 @@ static inline bool IsDocumentModified() noexcept {
 	return bDocumentModified || iCurrentEncoding != iOriginalEncoding;
 }
 
-// F3 / Shift+F3 follow the Find dialog's "Bookmark matched line" option.
-static void BookmarkFoundLine() noexcept {
-	if (iFindReplaceOption & FindReplaceOption_FindAllBookmark) {
+// F3 / Shift+F3 follow the Find dialog's "Bookmark matched line" option: every match found is marked,
+// and the marks start over when the search text changes.
+static void UpdateFindMark(bool found) noexcept {
+	static LPWSTR lpszMarkedFind = nullptr;
+	if (lpszMarkedFind == nullptr || efrData.wszFind == nullptr || !StrEqual(lpszMarkedFind, efrData.wszFind)) {
+		SciCall_MarkerDeleteAll(MarkerNumber_FindMark);
+		if (lpszMarkedFind != nullptr) {
+			NP2HeapFree(lpszMarkedFind);
+		}
+		lpszMarkedFind = (efrData.wszFind != nullptr) ? HeapStrDupW(efrData.wszFind) : nullptr;
+	}
+	if (found && (iFindReplaceOption & FindReplaceOption_FindAllBookmark)) {
 		const Sci_Line line = SciCall_LineFromPosition(SciCall_GetSelectionStart());
-		if ((SciCall_MarkerGet(line) & MarkerBitmask_Bookmark) == 0) {
-			SciCall_MarkerAdd(line, MarkerNumber_Bookmark);
+		if ((SciCall_MarkerGet(line) & (1 << MarkerNumber_FindMark)) == 0) {
+			Style_SetBookmark();
+			SciCall_MarkerAdd(line, MarkerNumber_FindMark);
 		}
 	}
 }
@@ -1752,6 +1762,7 @@ void UpdateBookmarkMarginWidth() noexcept {
 	// 16px for XPM bookmark symbol.
 	//const int width = (bShowBookmarkMargin || iChangeHistoryMarker != SC_CHANGE_HISTORY_DISABLED) ? max(SciCall_TextHeight() - 2, 16) : 0;
 	SciCall_SetMarginWidth(MarginNumber_Bookmark, width);
+	Style_UpdateBookmarkImages();
 }
 
 void SetWrapVisualFlags() noexcept {
@@ -3774,15 +3785,15 @@ LRESULT MsgCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
 
 		Sci_Line iNextLine;
 		if (LOWORD(wParam) == BME_EDIT_BOOKMARKNEXT) {
-			iNextLine = SciCall_MarkerNext(iLine + 1, MarkerBitmask_Bookmark);
+			iNextLine = SciCall_MarkerNext(iLine + 1, MarkerBitmask_AnyBookmark);
 			if (iNextLine < 0) {
-				iNextLine = SciCall_MarkerNext(0, MarkerBitmask_Bookmark);
+				iNextLine = SciCall_MarkerNext(0, MarkerBitmask_AnyBookmark);
 			}
 		} else {
-			iNextLine = SciCall_MarkerPrevious(iLine - 1, MarkerBitmask_Bookmark);
+			iNextLine = SciCall_MarkerPrevious(iLine - 1, MarkerBitmask_AnyBookmark);
 			if (iNextLine < 0) {
 				const Sci_Line iLines = SciCall_GetLineCount();
-				iNextLine = SciCall_MarkerPrevious(iLines, MarkerBitmask_Bookmark);
+				iNextLine = SciCall_MarkerPrevious(iLines, MarkerBitmask_AnyBookmark);
 			}
 		}
 
@@ -3806,7 +3817,9 @@ LRESULT MsgCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
 		break;
 
 	case BME_EDIT_BOOKMARKCLEAR:
-		SciCall_MarkerDeleteAll(MarkerNumber_Bookmark);
+		for (int marker = MarkerNumber_Bookmark; marker <= MarkerNumber_FindAllMark; marker++) {
+			SciCall_MarkerDeleteAll(marker);
+		}
 		break;
 
 	case IDT_EDIT_FIND:
@@ -3849,9 +3862,7 @@ LRESULT MsgCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
 				SelectWordAtCaret();
 			}
 			if (!SciCall_IsSelectionEmpty() && SciCall_GetSelTextLength() < NP2_FIND_REPLACE_LIMIT_SEL && !EditSelectionIsFindMatch(efrData)) {
-				if (EditSaveSelectionAsFindText(efrData, (LOWORD(wParam) == IDM_EDIT_FINDNEXT) ? CMD_FINDNEXTSEL : CMD_FINDPREVSEL, true)) {
-					BookmarkFoundLine();
-				}
+				UpdateFindMark(EditSaveSelectionAsFindText(efrData, (LOWORD(wParam) == IDM_EDIT_FINDNEXT) ? CMD_FINDNEXTSEL : CMD_FINDPREVSEL, true));
 				if (hDlgFindReplace != nullptr) {
 					SetDlgItemText(hDlgFindReplace, IDC_FINDTEXT, efrData.wszFind);
 					CheckDlgButton(hDlgFindReplace, IDC_FINDREGEXP, BST_UNCHECKED);
@@ -3872,15 +3883,11 @@ LRESULT MsgCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
 
 		switch (LOWORD(wParam)) {
 		case IDM_EDIT_FINDNEXT:
-			if (EditFindNext(efrData, false)) {
-				BookmarkFoundLine();
-			}
+			UpdateFindMark(EditFindNext(efrData, false));
 			break;
 
 		case IDM_EDIT_FINDPREV:
-			if (EditFindPrev(efrData, false)) {
-				BookmarkFoundLine();
-			}
+			UpdateFindMark(EditFindPrev(efrData, false));
 			break;
 
 		case IDM_EDIT_REPLACENEXT:

@@ -5932,13 +5932,8 @@ void EditMarkAll::Reset(UINT findFlag, Sci_Position iSelCount, LPSTR text) noexc
 		SciCall_IndicatorClearRange(0, SciCall_GetLength());
 		UpdateStatusBarCache(StatusItem_Find);
 	}
-	if (prevBookmarkLine >= 0 || bookmarkForFindAll) {
-		if ((findFlag | markFlag) & NP2_MarkAllBookmark) {
-			if ((findFlag & (NP2_MarkAllBookmark | NP2_FromFindAll)) != 0 || !bookmarkForFindAll) {
-				SciCall_MarkerDeleteAll(MarkerNumber_Bookmark);
-			}
-		}
-	}
+	// a new marking replaces only the marks of its own kind, user bookmarks are never touched.
+	SciCall_MarkerDeleteAll((findFlag & NP2_FromFindAll) ? MarkerNumber_FindAllMark : MarkerNumber_OccurrenceMark);
 	NP2HeapFree(pszText);
 
 	pending = false;
@@ -5983,9 +5978,7 @@ void EditMarkAll::Start(BOOL bChanged, UINT findFlag, Sci_Position iSelCount, LP
 	}
 
 	//EditMarkAll_Runs = 0;
-	bookmarkForFindAll = false;
 	if (findFlag & NP2_MarkAllBookmark) {
-		bookmarkForFindAll = (findFlag & NP2_FromFindAll) != 0;
 		Style_SetBookmark();
 	}
 	Continue(idleTaskTimer);
@@ -6016,13 +6009,14 @@ static Sci_Line EditMarkAll_Bookmark(Sci_Line bookmarkLine, const Sci_Position *
 	if (!(findFlag & NP2_MarkAllBookmark)) {
 		return bookmarkLine;
 	}
+	const int marker = (findFlag & NP2_FromFindAll) ? MarkerNumber_FindAllMark : MarkerNumber_OccurrenceMark;
 	if (findFlag & NP2_MarkAllMultiline) {
 		for (UINT i = 0; i < index; i += 2) {
 			Sci_Line line = SciCall_LineFromPosition(ranges[i]);
 			const Sci_Line lineEnd = SciCall_LineFromPosition(ranges[i] + ranges[i + 1]);
 			line = max(bookmarkLine + 1, line);
 			while (line <= lineEnd) {
-				SciCall_MarkerAdd(line, MarkerNumber_Bookmark);
+				SciCall_MarkerAdd(line, marker);
 				++line;
 			}
 			bookmarkLine = lineEnd;
@@ -6031,7 +6025,7 @@ static Sci_Line EditMarkAll_Bookmark(Sci_Line bookmarkLine, const Sci_Position *
 		for (UINT i = 0; i < index; i += 2) {
 			const Sci_Line line = SciCall_LineFromPosition(ranges[i]);
 			if (line != bookmarkLine) {
-				SciCall_MarkerAdd(line, MarkerNumber_Bookmark);
+				SciCall_MarkerAdd(line, marker);
 				bookmarkLine = line;
 			}
 		}
@@ -6213,7 +6207,7 @@ void EditToggleBookmarkAt(Sci_Position iPos) noexcept {
 }
 
 void EditBookmarkSelectAll() noexcept {
-	Sci_Line line = SciCall_MarkerNext(0, MarkerBitmask_Bookmark);
+	Sci_Line line = SciCall_MarkerNext(0, MarkerBitmask_AnyBookmark);
 	if (line >= 0) {
 		editMarkAll.ignoreSelectionUpdate = true;
 		const Sci_Line iCurLine = SciCall_LineFromPosition(SciCall_GetCurrentPos());
@@ -6222,7 +6216,7 @@ void EditBookmarkSelectAll() noexcept {
 		size_t main = 0;
 		size_t selection = 0;
 		Sci_Line minDiff = abs(line - iCurLine);
-		while ((line = SciCall_MarkerNext(line + 1, MarkerBitmask_Bookmark)) >= 0) {
+		while ((line = SciCall_MarkerNext(line + 1, MarkerBitmask_AnyBookmark)) >= 0) {
 			SciCall_AddSelection(SciCall_PositionFromLine(line), SciCall_PositionFromLine(line + 1));
 			++selection;
 			const Sci_Line diff = abs(line - iCurLine);
