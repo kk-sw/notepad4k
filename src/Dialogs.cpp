@@ -2318,6 +2318,58 @@ bool AutoSaveSettingsDlg(HWND hwnd) noexcept {
 
 //=============================================================================
 //
+// DefaultDirectoryDlg()
+//
+static INT_PTR CALLBACK DefaultDirectoryDlgProc(HWND hwnd, UINT umsg, WPARAM wParam, LPARAM lParam) noexcept {
+	switch (umsg) {
+	case WM_INITDIALOG: {
+		SetWindowLongPtr(hwnd, DWLP_USER, lParam);
+		HWND hwndPath = GetDlgItem(hwnd, IDC_DEFAULTDIR_PATH);
+		Edit_LimitText(hwndPath, MAX_PATH - 1);
+		SetWindowText(hwndPath, AsPointer<LPCWSTR>(lParam));
+		SHAutoComplete(hwndPath, SHACF_FILESYSTEM | SHACF_AUTOSUGGEST_FORCE_ON);
+		DarkMode_InitDialog(hwnd);
+	}
+	return TRUE;
+
+	case WM_COMMAND:
+		switch (LOWORD(wParam)) {
+		case IDC_DEFAULTDIR_BROWSE: {
+			WCHAR tchText[MAX_PATH];
+			WCHAR tchFolder[MAX_PATH];
+			GetDlgItemText(hwnd, IDC_DEFAULTDIR_PATH, tchText, COUNTOF(tchText));
+			ResolveDirectoryPath(tchText, tchFolder);
+			if (GetDirectory(hwnd, 0, tchFolder, tchFolder)) {
+				SetDlgItemText(hwnd, IDC_DEFAULTDIR_PATH, tchFolder);
+			}
+			PostMessage(hwnd, WM_NEXTDLGCTL, AsInteger<WPARAM>(GetDlgItem(hwnd, IDC_DEFAULTDIR_PATH)), TRUE);
+		}
+		break;
+
+		case IDOK: {
+			LPWSTR lpszDirectory = AsPointer<LPWSTR>(GetWindowLongPtr(hwnd, DWLP_USER));
+			GetDlgItemText(hwnd, IDC_DEFAULTDIR_PATH, lpszDirectory, MAX_PATH);
+			TrimString(lpszDirectory);
+			EndDialog(hwnd, IDOK);
+		}
+		break;
+
+		case IDCANCEL:
+			EndDialog(hwnd, IDCANCEL);
+			break;
+		}
+		return TRUE;
+	}
+	return FALSE;
+}
+
+bool DefaultDirectoryDlg(HWND hwnd, wchar_t (&tchDirectory)[MAX_PATH]) noexcept {
+	const INT_PTR iResult = ThemedDialogBoxParam(g_hInstance, MAKEINTRESOURCE(IDD_DEFAULTDIR), hwnd, DefaultDirectoryDlgProc, AsInteger<LPARAM>(tchDirectory));
+	return iResult == IDOK;
+}
+
+//=============================================================================
+//
 // InfoBoxDlgProc()
 //
 //

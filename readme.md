@@ -25,6 +25,9 @@ A personal fork of [Notepad4](https://github.com/zufuliu/notepad4), a lightweigh
   - **About:** opens the About dialog.
 - **New default toolbar layout:** the new buttons are added and some rarely used ones are removed (they can still be added back).
   - An existing `Notepad4.ini` keeps its saved layout. Use View → Customize Toolbar to add the new buttons.
+- **Default save location:** Settings → Default Save Location... sets the folder where Save and Save As start for a file that hasn't been saved yet.
+  - The dialog shows the current value; "..." browses for a folder; leave it empty to turn it off.
+  - It's stored as `[Settings2] DefaultDirectory` and also used by File → Open when no file is loaded.
 - **Branding:** a refreshed app icon and the name "Notepad4-k", shown in the About box, the Help menu and the exe's version info.
   - The About box marks this as a custom build and lists the original copyrights under their own heading.
 

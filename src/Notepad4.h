@@ -306,6 +306,7 @@ bool FileLoad(FileLoadFlag loadFlag, LPCWSTR lpszFile);
 bool FileSave(FileSaveFlag saveFlag);
 bool OpenFileDlg(LPWSTR lpstrFile, int cchFile, LPCWSTR lpstrInitialDir);
 bool SaveFileDlg(FileSaveFlag saveFlag, LPWSTR lpstrFile, int cchFile, LPCWSTR lpstrInitialDir);
+void ResolveDirectoryPath(LPCWSTR lpszDir, wchar_t (&tchDest)[MAX_PATH]) noexcept;
 
 enum {
 	AutoSaveOption_None = 0,

@@ -57,6 +57,7 @@ bool	GetZoomLevelComboBoxValue(HWND hwnd, int nCtrId, int *zoomLevel) noexcept;
 void	ZoomLevelDlg(HWND hwnd, bool bBottom) noexcept;
 bool	AutoCompletionSettingsDlg(HWND hwnd) noexcept;
 bool	AutoSaveSettingsDlg(HWND hwnd) noexcept;
+bool	DefaultDirectoryDlg(HWND hwnd, wchar_t (&tchDirectory)[MAX_PATH]) noexcept;
 
 INT_PTR InfoBox(UINT uType, LPCWSTR lpstrSetting, UINT uidMessage, ...) noexcept;
 #define InfoBoxInfo(uType, lpstrSetting, uidMessage, ...)	InfoBox(MB_ICONINFORMATION | (uType), (lpstrSetting), (uidMessage), ##__VA_ARGS__)

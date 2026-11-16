@@ -627,7 +627,20 @@ CleanUpResources  EditSpellCheckReleaseResources (before OleUninitialize)
 - **View menu:** a separator, then "Spell Check" and "Spell Check Language ▸", at the end of the menu.
 - **Settings:** `[Settings] SpellCheck`, `SpellCheckLanguage`.
 
-### 4.3 Files touched
+### 4.3 Default save location
+
+- **Menu:** Settings → (separator) → "Default Save Location..." (`IDM_SET_DEFAULT_DIRECTORY` 40499).
+- **Dialog:** `IDD_DEFAULTDIR` (`DefaultDirectoryDlg`, `src/Dialogs.cpp`).
+  - It shows the current value in an edit box and has a "..." button that opens a folder picker.
+  - The picker starts at the resolved path.
+- **Storage:** the existing upstream key `[Settings2] DefaultDirectory`, written immediately.
+  - Environment variables are expanded; a relative path is resolved against the program folder (`ResolveDirectoryPath`).
+  - An empty value deletes the key.
+- **Effect:** `SetupInitialOpenSaveDir` uses it when no file is loaded.
+  - Save and Save As on an untitled document open there.
+  - So does File → Open.
+
+### 4.4 Files touched
 
 | File | Change |
 |---|---|
@@ -637,5 +650,6 @@ CleanUpResources  EditSpellCheckReleaseResources (before OleUninitialize)
 | `src/EditAutoC.cpp` | `IsSpellCheckStyle` |
 | `src/Edit.h`, `src/SciCall.h`, `src/config.h`, `src/Notepad4.h` | Declarations, Scintilla wrappers, feature flag, timer ID |
 | `src/resource.h`, `src/Notepad4.rc`, `locale/*/Notepad4.rc` (11) | IDs, View menu items, strings, tooltips |
+| `src/Dialogs.cpp`, `src/Dialogs.h` | `DefaultDirectoryDlg` (default save location) |
 | `build/VisualStudio/Notepad4.vcxproj(.filters)`, `build/CodeLite/Notepad4.project` | Register `EditSpellCheck.cpp` |
 | `res/Toolbar{16..48}.bmp`, `tools/images/**`, `tools/ImageTool.py` | Nine new toolbar images and their sources |

@@ -4341,6 +4341,12 @@ LRESULT MsgCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
 		}
 		break;
 
+	case IDM_SET_DEFAULT_DIRECTORY:
+		if (DefaultDirectoryDlg(hwnd, tchDefaultDir) && CreateIniFile(szIniFile)) {
+			IniSetString(INI_SECTION_NAME_FLAGS, L"DefaultDirectory", StrNotEmpty(tchDefaultDir) ? tchDefaultDir : nullptr);
+		}
+		break;
+
 	case IDM_SET_FILE_AUTOSAVE: {
 		const DWORD backup = dwAutoSavePeriod;
 		if (AutoSaveSettingsDlg(hwnd)) {
@@ -7334,6 +7340,20 @@ void EditApplyDefaultEncoding(LPCEDITLEXER pLex, BOOL bLexerChanged) noexcept {
 // OpenFileDlg()
 //
 //
+// expands environment variables, a relative path is relative to the program folder.
+void ResolveDirectoryPath(LPCWSTR lpszDir, wchar_t (&tchDest)[MAX_PATH]) noexcept {
+	if (!ExpandEnvironmentStringsEx(lpszDir, tchDest)) {
+		lstrcpyn(tchDest, lpszDir, MAX_PATH);
+	}
+	if (StrNotEmpty(tchDest) && PathIsRelative(tchDest)) {
+		WCHAR tchModule[MAX_PATH];
+		GetModuleFileName(nullptr, tchModule, COUNTOF(tchModule));
+		PathRemoveFileSpec(tchModule);
+		PathAppend(tchModule, tchDest);
+		PathCanonicalize(tchDest, tchModule);
+	}
+}
+
 NP2_noinline
 void SetupInitialOpenSaveDir(wchar_t (&tchInitialDir)[MAX_PATH], LPCWSTR lpstrInitialDir) noexcept {
 	SetStrEmpty(tchInitialDir);
@@ -7343,16 +7363,7 @@ void SetupInitialOpenSaveDir(wchar_t (&tchInitialDir)[MAX_PATH], LPCWSTR lpstrIn
 		lstrcpy(tchInitialDir, szCurFile);
 		PathRemoveFileSpec(tchInitialDir);
 	} else if (StrNotEmpty(tchDefaultDir)) {
-		if (!ExpandEnvironmentStringsEx(tchDefaultDir, tchInitialDir)) {
-			lstrcpy(tchInitialDir, tchDefaultDir);
-		}
-		if (PathIsRelative(tchInitialDir)) {
-			WCHAR tchModule[MAX_PATH];
-			GetModuleFileName(nullptr, tchModule, COUNTOF(tchModule));
-			PathRemoveFileSpec(tchModule);
-			PathAppend(tchModule, tchInitialDir);
-			PathCanonicalize(tchInitialDir, tchModule);
-		}
+		ResolveDirectoryPath(tchDefaultDir, tchInitialDir);
 	} else if (StrNotEmpty(mruFile.pszItems[0])) {
 		lstrcpy(tchInitialDir, mruFile.pszItems[0]);
 		PathRemoveFileSpec(tchInitialDir);
