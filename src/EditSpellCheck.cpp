@@ -111,12 +111,6 @@ bool languageEnumerated = false;
 WCHAR languageTags[MaxLanguageCount][LOCALE_NAME_MAX_LENGTH];
 SpellCheckMenu spellMenu;
 
-// code page 0 holds legacy ANSI bytes, which differ from CP_ACP when the system code page is UTF-8.
-inline UINT GetDocumentCodePage() noexcept {
-	const UINT cpEdit = SciCall_GetCodePage();
-	return cpEdit ? cpEdit : mEncoding[CPI_DEFAULT].uCodePage;
-}
-
 bool IsLanguageSupported(LPCWSTR tag) noexcept {
 	BOOL supported = FALSE;
 	return StrNotEmpty(tag) && SUCCEEDED(spellFactory->IsSupported(tag, &supported)) && supported;

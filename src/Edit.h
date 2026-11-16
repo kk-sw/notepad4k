@@ -612,6 +612,11 @@ constexpr bool IsZeroFlagsCodePage(UINT page) noexcept {
 
 // in EditEncoding.cpp
 extern NP2ENCODING mEncoding[];
+// code page 0 holds legacy ANSI bytes, which differ from CP_ACP when the system code page is UTF-8.
+inline UINT GetDocumentCodePage() noexcept {
+	const UINT cpEdit = SciCall_GetCodePage();
+	return cpEdit ? cpEdit : mEncoding[CPI_DEFAULT].uCodePage;
+}
 constexpr bool Encoding_IsUnicode(int iEncoding) noexcept {
 	return iEncoding == CPI_UNICODEBOM
 		|| iEncoding == CPI_UNICODEBEBOM

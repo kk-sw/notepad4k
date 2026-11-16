@@ -7113,6 +7113,62 @@ bool FileLoad(FileLoadFlag loadFlag, LPCWSTR lpszFile) {
 	return fSuccess;
 }
 
+// "con.txt" etc. still opens the device on older Windows, so the text would be lost.
+static bool IsReservedDeviceName(LPCWSTR name) noexcept {
+	const int len = lstrlen(name);
+	if (len == 3) {
+		constexpr LPCWSTR devices[] = { L"CON", L"PRN", L"AUX", L"NUL" };
+		for (LPCWSTR device : devices) {
+			if (StrCmpI(name, device) == 0) {
+				return true;
+			}
+		}
+	} else if (len == 4 && (StrCmpNI(name, L"COM", 3) == 0 || StrCmpNI(name, L"LPT", 3) == 0)) {
+		const WCHAR ch = name[3];
+		return (ch >= L'0' && ch <= L'9') || ch == L'¹' || ch == L'²' || ch == L'³';
+	}
+	return false;
+}
+
+// joins the first words (letters and digits only) of the document, e.g. "# Meeting notes, 2026" => "Meeting notes 2026".
+static bool SuggestFileNameFromText(wchar_t (&tchName)[MAX_PATH]) noexcept {
+	constexpr int MaxWordCount = 5;
+	constexpr int MaxNameLength = 80;
+	constexpr int MaxScanBytes = 1024;
+	const int length = static_cast<int>(min<Sci_Position>(SciCall_GetLength(), MaxScanBytes));
+	if (length == 0) {
+		return false;
+	}
+
+	WCHAR wchText[MaxScanBytes];
+	const int cchText = MultiByteToWideChar(GetDocumentCodePage(), 0, SciCall_GetRangePointer(0, length), length, wchText, COUNTOF(wchText));
+	int cchName = 0;
+	int wordCount = 0;
+	bool inWord = false;
+	for (int i = 0; i < cchText; i++) {
+		if (IsCharAlphaNumeric(wchText[i])) {
+			if (cchName >= MaxNameLength) {
+				break;
+			}
+			if (!inWord) {
+				if (wordCount == MaxWordCount) {
+					break;
+				}
+				if (wordCount != 0) {
+					tchName[cchName++] = L' ';
+				}
+				++wordCount;
+				inWord = true;
+			}
+			tchName[cchName++] = wchText[i];
+		} else {
+			inWord = false;
+		}
+	}
+	tchName[cchName] = L'\0';
+	return cchName != 0 && !IsReservedDeviceName(tchName);
+}
+
 //=============================================================================
 //
 // FileSave()
@@ -7165,7 +7221,7 @@ bool FileSave(FileSaveFlag saveFlag) {
 	}
 
 	bool fSuccess = false;
-	WCHAR tchFile[MAX_PATH];
+	WCHAR tchFile[MAX_PATH] = L"";
 	EditFileIOStatus status{};
 	status.iEncoding = iCurrentEncoding;
 	status.iEOLMode = iCurrentEOLMode;
@@ -7193,11 +7249,18 @@ bool FileSave(FileSaveFlag saveFlag) {
 	// Save As...
 	if ((saveFlag & (FileSaveFlag_SaveAs | FileSaveFlag_SaveCopy | FileSaveFlag_Untitled))) {
 		WCHAR tchInitialDir[MAX_PATH] = L"";
+		WCHAR tchSuggestedName[MAX_PATH];
+		LPCWSTR pszFileName = PathFindFileName(szCurFile);
+		if (StrIsEmpty(szCurFile) && SuggestFileNameFromText(tchSuggestedName)) {
+			pszFileName = tchSuggestedName;
+		}
 		if ((saveFlag & FileSaveFlag_SaveCopy) && StrNotEmpty(tchLastSaveCopyDir)) {
 			lstrcpy(tchInitialDir, tchLastSaveCopyDir);
-			PathCombine(tchFile, tchInitialDir, PathFindFileName(szCurFile));
-		} else {
+			PathCombine(tchFile, tchInitialDir, pszFileName);
+		} else if (StrNotEmpty(szCurFile)) {
 			lstrcpy(tchFile, szCurFile);
+		} else {
+			lstrcpy(tchFile, pszFileName);
 		}
 
 		if (SaveFileDlg(saveFlag, tchFile, COUNTOF(tchFile), tchInitialDir)) {
