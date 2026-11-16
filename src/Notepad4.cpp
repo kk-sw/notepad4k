@@ -422,6 +422,101 @@ static inline bool IsDocumentModified() noexcept {
 	return bDocumentModified || iCurrentEncoding != iOriginalEncoding;
 }
 
+// toolbar buttons and the command their keyboard shortcut runs, when the two differ.
+static constexpr UINT ToolbarShortcutCommands[][2] = {
+	{ IDT_FILE_NEW, IDM_FILE_NEW }, { IDT_FILE_OPEN, IDM_FILE_OPEN }, { IDT_FILE_BROWSE, IDM_FILE_BROWSE },
+	{ IDT_FILE_SAVE, IDM_FILE_SAVE }, { IDT_FILE_SAVEAS, IDM_FILE_SAVEAS }, { IDT_FILE_SAVECOPY, IDM_FILE_SAVECOPY },
+	{ IDT_FILE_NEWWINDOW, IDM_FILE_NEWWINDOW }, { IDT_FILE_LAUNCH, IDM_FILE_LAUNCH }, { IDT_FILE_PRINT, IDM_FILE_PRINT },
+	{ IDT_FILE_OPENFAV, IDM_FILE_OPENFAV }, { IDT_FILE_ADDTOFAV, IDM_FILE_ADDTOFAV }, { IDT_FILE_EXIT, IDM_FILE_EXIT },
+	{ IDT_EDIT_UNDO, IDM_EDIT_UNDO }, { IDT_EDIT_REDO, IDM_EDIT_REDO }, { IDT_EDIT_CUT, IDM_EDIT_CUT },
+	{ IDT_EDIT_COPY, IDM_EDIT_COPY }, { IDT_EDIT_PASTE, IDM_EDIT_PASTE }, { IDT_EDIT_DELETE, IDM_EDIT_DELETE },
+	{ IDT_EDIT_FIND, IDM_EDIT_FIND }, { IDT_EDIT_REPLACE, IDM_EDIT_REPLACE }, { IDT_EDIT_LINECOMMENT, IDM_EDIT_LINECOMMENT },
+	{ IDT_EDIT_CODE_PRETTY, IDM_EDIT_CODE_PRETTY }, { IDT_EDIT_MARKDOWN_BOLD, CMD_MARKDOWN_BOLD }, { IDT_EDIT_MARKDOWN_ITALIC, CMD_MARKDOWN_ITALIC },
+	{ IDT_EDIT_BOOKMARK_TOGGLE, BME_EDIT_BOOKMARKTOGGLE }, { IDT_EDIT_BOOKMARK_PREV, BME_EDIT_BOOKMARKPREV },
+	{ IDT_EDIT_BOOKMARK_NEXT, BME_EDIT_BOOKMARKNEXT }, { IDT_EDIT_BOOKMARK_CLEAR, BME_EDIT_BOOKMARKCLEAR },
+	{ IDT_EDIT_BOOKMARK_CLEARLINE, BME_EDIT_BOOKMARKCLEARLINE }, { IDT_EDIT_BOOKMARK_CLEARAUTO, BME_EDIT_BOOKMARKCLEARAUTO },
+	{ IDT_VIEW_WORDWRAP, IDM_VIEW_WORDWRAP }, { IDT_VIEW_ZOOMIN, IDM_VIEW_ZOOMIN }, { IDT_VIEW_ZOOMOUT, IDM_VIEW_ZOOMOUT },
+	{ IDT_VIEW_RESETZOOM, IDM_VIEW_RESETZOOM }, { IDT_VIEW_SCHEME, IDM_VIEW_SCHEME }, { IDT_VIEW_SCHEMECONFIG, IDM_VIEW_SCHEME_CONFIG },
+	{ IDT_VIEW_TOGGLEFOLDS, IDM_VIEW_FOLD_DEFAULT }, { IDT_VIEW_SPELLCHECK, IDM_VIEW_SPELLCHECK },
+	{ IDT_VIEW_ALWAYSONTOP, IDM_VIEW_ALWAYSONTOP }, { IDT_HELP_ABOUT, IDM_HELP_ABOUT },
+};
+
+static void AppendShortcutKeyName(LPWSTR buffer, int cchBuffer, const ACCEL &accel) noexcept {
+	WCHAR tch[64] = L"";
+	if (accel.fVirt & FCONTROL) {
+		lstrcat(tch, L"Ctrl+");
+	}
+	if (accel.fVirt & FALT) {
+		lstrcat(tch, L"Alt+");
+	}
+	if (accel.fVirt & FSHIFT) {
+		lstrcat(tch, L"Shift+");
+	}
+	const WORD key = accel.key;
+	WCHAR name[32] = L"";
+	if (!(accel.fVirt & FVIRTKEY) || (key >= '0' && key <= '9') || (key >= 'A' && key <= 'Z')) {
+		name[0] = static_cast<WCHAR>(key);
+		name[1] = L'\0';
+	} else if (key >= VK_F1 && key <= VK_F24) {
+		wsprintf(name, L"F%u", key - VK_F1 + 1);
+	} else if (key == VK_OEM_PLUS || key == VK_OEM_MINUS || key == VK_OEM_COMMA || key == VK_OEM_PERIOD) {
+		// the layout name of these keys is their unshifted character ("=" for plus on a US keyboard).
+		name[0] = L"+,-."[key - VK_OEM_PLUS];
+		name[1] = L'\0';
+	} else {
+		// extended keys need the extended bit, otherwise the numpad name is returned.
+		const bool extended = (key >= VK_PRIOR && key <= VK_DELETE) || key == VK_DIVIDE;
+		const UINT scanCode = MapVirtualKey(key, MAPVK_VK_TO_VSC);
+		if (scanCode == 0 || !GetKeyNameText(static_cast<LONG>((scanCode << 16) | (extended << 24)), name, COUNTOF(name))) {
+			wsprintf(name, L"0x%02X", key);
+		}
+	}
+	lstrcat(tch, name);
+	if (StrNotEmpty(buffer)) {
+		StrCatBuff(buffer, L", ", cchBuffer);
+	}
+	StrCatBuff(buffer, tch, cchBuffer);
+}
+
+// hovering a toolbar button shows "function ~ shortcut" in the empty middle part of the status bar; 0 clears it.
+static void ShowToolbarButtonHelp(int idCommand) noexcept {
+	if (!bShowStatusbar) {
+		return;
+	}
+	if (idCommand == 0) {
+		KillTimer(hwndMain, ID_TOOLBARHELPTIMER);
+		StatusSetText(hwndStatus, StatusItem_Empty, L"");
+		return;
+	}
+
+	UINT command = idCommand;
+	for (const auto &pair : ToolbarShortcutCommands) {
+		if (pair[0] == static_cast<UINT>(idCommand)) {
+			command = pair[1];
+			break;
+		}
+	}
+	WCHAR keys[128] = L"";
+	const int count = CopyAcceleratorTable(hAccMain, nullptr, 0);
+	ACCEL *accels = static_cast<ACCEL *>(NP2HeapAlloc(sizeof(ACCEL) * max(count, 1)));
+	CopyAcceleratorTable(hAccMain, accels, count);
+	for (int i = 0; i < count; i++) {
+		if (accels[i].cmd == command) {
+			AppendShortcutKeyName(keys, COUNTOF(keys), accels[i]);
+		}
+	}
+	NP2HeapFree(accels);
+
+	WCHAR tch[256];
+	GetString(idCommand, tch, COUNTOF(tch));
+	if (StrNotEmpty(keys)) {
+		StrCatBuff(tch, L" ~ ", COUNTOF(tch));
+		StrCatBuff(tch, keys, COUNTOF(tch));
+	}
+	StatusSetText(hwndStatus, StatusItem_Empty, tch);
+	SetTimer(hwndMain, ID_TOOLBARHELPTIMER, 250, nullptr);
+}
+
 // the bookmark kinds are numbered from the user bookmark to Find All, so starting after the user bookmark keeps it.
 static void ClearBookmarkKinds(int firstMarker) noexcept {
 	for (int marker = firstMarker; marker <= MarkerNumber_FindAllMark; marker++) {
@@ -1327,6 +1422,19 @@ LRESULT CALLBACK MainWndProc(HWND hwnd, UINT umsg, WPARAM wParam, LPARAM lParam)
 			AutoSave_DoWork(FileSaveFlag_Default);
 		} else if (wParam == ID_SPELLCHECKTIMER) {
 			EditSpellCheckOnTimer();
+		} else if (wParam == ID_TOOLBARHELPTIMER) {
+			// TBN_HOTITEMCHANGE is not sent in every case the mouse leaves a button, e.g. from a disabled one,
+			// and a disabled button is never the hot item, so test what is under the mouse.
+			POINT pt;
+			GetCursorPos(&pt);
+			bool overButton = WindowFromPoint(pt) == hwndToolbar;
+			if (overButton) {
+				ScreenToClient(hwndToolbar, &pt);
+				overButton = SendMessage(hwndToolbar, TB_HITTEST, 0, AsInteger<LPARAM>(&pt)) >= 0;
+			}
+			if (!overButton) {
+				ShowToolbarButtonHelp(0);
+			}
 		}
 		break;
 
@@ -5142,6 +5250,12 @@ LRESULT MsgNotify(HWND hwnd, WPARAM wParam, LPARAM lParam) {
 		case TBN_ENDADJUST:
 			UpdateToolbar();
 			break;
+
+		case TBN_HOTITEMCHANGE: {
+			const NMTBHOTITEM *pHot = AsPointer<const NMTBHOTITEM *>(lParam);
+			ShowToolbarButtonHelp((pHot->dwFlags & HICF_LEAVING) ? 0 : pHot->idNew);
+		}
+		return FALSE;
 
 		case TBN_QUERYDELETE:
 		case TBN_QUERYINSERT:

@@ -25,6 +25,7 @@ A personal fork of [Notepad4](https://github.com/zufuliu/notepad4), a lightweigh
   - **Markdown Link:** turns the selected text (e.g. a URL) into `[⇗](selected text)`, trimming spaces and line endings; does nothing on a multi-line selection. Same enable rule.
   - **Clear Markdown Formatting:** removes Markdown from the selection: bold, italic, strikethrough, inline code, links (keeping the text, or the URL for `[⇗](url)`), images, escapes, headings and quotes. List and task markers are kept; markers right around the selection are removed too.
   - **About:** opens the About dialog.
+- **Toolbar shortcut hints:** hovering a toolbar button shows "function ~ shortcut" (e.g. `Zoom In ~ Ctrl+Num +, Ctrl++`) in the empty middle part of the status bar; the keys come from the live accelerator table.
 - **New default toolbar layout:** the new buttons are added and some rarely used ones are removed (they can still be added back).
   - An existing `Notepad4.ini` keeps its saved layout. Use View → Customize Toolbar to add the new buttons.
 - **Default save location:** Settings → Default Save Location... sets the folder where Save and Save As start for a file that hasn't been saved yet.

@@ -131,6 +131,7 @@ enum {
 #define ID_PASTEBOARDTIMER			0xA001	// paste board timer
 #define ID_AUTOSAVETIMER			0xA002	// AutoSave timer
 #define ID_SPELLCHECKTIMER			0xA003	// spell check timer
+#define ID_TOOLBARHELPTIMER			0xA004	// clears the toolbar shortcut text in the status bar
 
 enum EscFunction {
 	EscFunction_None = 0,
