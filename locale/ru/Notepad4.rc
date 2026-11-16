@@ -389,6 +389,9 @@ BEGIN
 			MENUITEM SEPARATOR
 			MENUITEM "&Выбрать все\tAlt+F6",							BME_EDIT_BOOKMARKSELECT
 			MENUITEM "&Удалить все\tAlt+F2",							BME_EDIT_BOOKMARKCLEAR
+			MENUITEM SEPARATOR
+			MENUITEM "C&lear Automatic Marks on Line",	BME_EDIT_BOOKMARKCLEARLINE
+			MENUITEM "Clear All A&utomatic Marks\tAlt+Shift+F2",	BME_EDIT_BOOKMARKCLEARAUTO
 		END
 		POPUP "&Переход"
 		BEGIN
@@ -990,6 +993,7 @@ BEGIN
     VK_F2,          BME_EDIT_BOOKMARKNEXT,      VIRTKEY, NOINVERT
     VK_F2,          BME_EDIT_BOOKMARKTOGGLE,    VIRTKEY, CONTROL, NOINVERT
     VK_F2,          BME_EDIT_BOOKMARKCLEAR,     VIRTKEY, ALT, NOINVERT
+    VK_F2,          BME_EDIT_BOOKMARKCLEARAUTO, VIRTKEY, SHIFT, ALT, NOINVERT
     VK_F2,          BME_EDIT_BOOKMARKPREV,      VIRTKEY, SHIFT, NOINVERT
     VK_F3,          IDM_EDIT_FINDNEXT,          VIRTKEY, NOINVERT
     VK_F3,          IDM_EDIT_FINDPREV,          VIRTKEY, SHIFT, NOINVERT
@@ -1868,6 +1872,12 @@ BEGIN
     IDT_HELP_ABOUT          "О программе"
     IDT_EDIT_MARKDOWN_LINK  "Markdown Link [⇗](...)"
     IDT_EDIT_MARKDOWN_CLEAR "Clear Markdown Formatting"
+    IDT_EDIT_BOOKMARK_TOGGLE "Закладки: Добавить/удалить"
+    IDT_EDIT_BOOKMARK_PREV  "Закладки: Перейти к предыдущей"
+    IDT_EDIT_BOOKMARK_NEXT  "Закладки: Перейти к следующей"
+    IDT_EDIT_BOOKMARK_CLEAR "Закладки: Удалить все"
+    IDT_EDIT_BOOKMARK_CLEARLINE "Закладки: Clear Automatic Marks on Line"
+    IDT_EDIT_BOOKMARK_CLEARAUTO "Закладки: Clear All Automatic Marks"
 END
 
 STRINGTABLE

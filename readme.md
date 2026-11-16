@@ -84,7 +84,7 @@ Four kinds of bookmark share the bookmark margin; the automatic ones never touch
 
 | Kind | Created by | Removed when | Margin symbol |
 |---|---|---|---|
-| User | Ctrl+F2, margin click | you remove it (Ctrl+F2, margin click, Alt+F2) | green ribbon, left half |
+| User | Ctrl+F2, margin click, toolbar | you remove it (Ctrl+F2, margin click, Alt+F2) | green ribbon, left half |
 | Mark Occurrences | View → Mark Occurrences → Bookmark Matched Line | the next marking replaces it | orange dot, top right |
 | F3 | F3 / Shift+F3 with the Find dialog's "Bookmark matched line" ticked | the search text changes (every match found so far stays marked) | blue dot, middle right |
 | Find All | Find All / Select All with "Bookmark matched line" ticked | the next Find All | purple dot, bottom right |
@@ -92,6 +92,8 @@ Four kinds of bookmark share the bookmark margin; the automatic ones never touch
 - F2 / Shift+F2 and Select All Bookmarks go through all four kinds; Alt+F2 (Clear Bookmarks) removes all four.
 - Ctrl+F2 on a line with only an automatic mark adds a user bookmark.
 - Each kind has its own place in the margin, so all four stay visible on one line; the symbols follow the zoom.
+- Bookmarks → Clear Automatic Marks on Line and Clear All Automatic Marks (Alt+Shift+F2; menu and toolbar, in their own group) remove only the automatic kinds; your own bookmarks stay.
+- Toolbar: Toggle, Previous, Next and Clear All bookmark buttons, then the two automatic-mark buttons, right after Find / Replace.
 - Without the bookmark margin, the automatic kinds show as a fainter line background than user bookmarks.
 
 ## Build

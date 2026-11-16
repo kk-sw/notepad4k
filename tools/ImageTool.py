@@ -275,6 +275,12 @@ def make_notepad4_toolbar_bitmap(size):
 		f'{images}/About.png',			# IDT_HELP_ABOUT
 		f'{images}/MarkdownLink.png',	# IDT_EDIT_MARKDOWN_LINK
 		f'{images}/MarkdownClear.png',	# IDT_EDIT_MARKDOWN_CLEAR
+		f'{images}/BookmarkToggle.png',	# IDT_EDIT_BOOKMARK_TOGGLE
+		f'{images}/BookmarkPrev.png',	# IDT_EDIT_BOOKMARK_PREV
+		f'{images}/BookmarkNext.png',	# IDT_EDIT_BOOKMARK_NEXT
+		f'{images}/BookmarkClear.png',	# IDT_EDIT_BOOKMARK_CLEAR
+		f'{images}/AutoMarksClearLine.png',	# IDT_EDIT_BOOKMARK_CLEARLINE
+		f'{images}/AutoMarksClear.png',	# IDT_EDIT_BOOKMARK_CLEARAUTO
 	], f'Toolbar{size}.bmp')
 
 def make_all_notepad4_toolbar_bitmap():

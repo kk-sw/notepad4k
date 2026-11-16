@@ -388,6 +388,9 @@ BEGIN
 			MENUITEM SEPARATOR
 			MENUITEM "&Zaznacz wszystkie\tAlt+F6",	BME_EDIT_BOOKMARKSELECT
 			MENUITEM "&Wyczyść wszystkie\tAlt+F2",	BME_EDIT_BOOKMARKCLEAR
+			MENUITEM SEPARATOR
+			MENUITEM "C&lear Automatic Marks on Line",	BME_EDIT_BOOKMARKCLEARLINE
+			MENUITEM "Clear All A&utomatic Marks\tAlt+Shift+F2",	BME_EDIT_BOOKMARKCLEARAUTO
 		END
 		POPUP "P&rzejdź"
 		BEGIN
@@ -989,6 +992,7 @@ BEGIN
     VK_F2,          BME_EDIT_BOOKMARKNEXT,      VIRTKEY, NOINVERT
     VK_F2,          BME_EDIT_BOOKMARKTOGGLE,    VIRTKEY, CONTROL, NOINVERT
     VK_F2,          BME_EDIT_BOOKMARKCLEAR,     VIRTKEY, ALT, NOINVERT
+    VK_F2,          BME_EDIT_BOOKMARKCLEARAUTO, VIRTKEY, SHIFT, ALT, NOINVERT
     VK_F2,          BME_EDIT_BOOKMARKPREV,      VIRTKEY, SHIFT, NOINVERT
     VK_F3,          IDM_EDIT_FINDNEXT,          VIRTKEY, NOINVERT
     VK_F3,          IDM_EDIT_FINDPREV,          VIRTKEY, SHIFT, NOINVERT
@@ -1867,6 +1871,12 @@ BEGIN
     IDT_HELP_ABOUT          "O programie Notepad4k"
     IDT_EDIT_MARKDOWN_LINK  "Markdown Link [⇗](...)"
     IDT_EDIT_MARKDOWN_CLEAR "Clear Markdown Formatting"
+    IDT_EDIT_BOOKMARK_TOGGLE "Zakładki: Przełącz"
+    IDT_EDIT_BOOKMARK_PREV  "Zakładki: Przejdź do poprzedniej"
+    IDT_EDIT_BOOKMARK_NEXT  "Zakładki: Przejdź do następnej"
+    IDT_EDIT_BOOKMARK_CLEAR "Zakładki: Wyczyść wszystkie"
+    IDT_EDIT_BOOKMARK_CLEARLINE "Zakładki: Clear Automatic Marks on Line"
+    IDT_EDIT_BOOKMARK_CLEARAUTO "Zakładki: Clear All Automatic Marks"
 END
 
 STRINGTABLE

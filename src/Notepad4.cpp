@@ -68,7 +68,7 @@ static HICON hTrayIcon = nullptr;
 static UINT uTrayIconDPI = 0;
 
 #define TOOLBAR_COMMAND_BASE	IDT_FILE_NEW
-#define DefaultToolbarButtons	L"0 1 27 2 0 22 0 4 18 0 10 11 0 12 0 24 0 13 14 30 0 28 0 31 0 29 0 32 33 34 36 0 37"
+#define DefaultToolbarButtons	L"0 1 27 2 0 22 0 4 18 0 10 11 0 38 39 40 41 0 42 43 0 12 0 24 0 13 14 30 0 28 0 31 0 29 0 32 33 34 36 0 37"
 // NOLINTBEGIN(readability-redundant-zero-initializer)
 #if NP2_ENABLE_CUSTOMIZE_TOOLBAR_LABELS
 static TBBUTTON tbbMainWnd[] =
@@ -114,6 +114,12 @@ static const TBBUTTON tbbMainWnd[] =
 	{34, 	IDT_HELP_ABOUT, 	TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, 0},
 	{35, 	IDT_EDIT_MARKDOWN_LINK, 	TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, 0},
 	{36, 	IDT_EDIT_MARKDOWN_CLEAR, 	TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, 0},
+	{37, 	IDT_EDIT_BOOKMARK_TOGGLE, 	TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, 0},
+	{38, 	IDT_EDIT_BOOKMARK_PREV, 	TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, 0},
+	{39, 	IDT_EDIT_BOOKMARK_NEXT, 	TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, 0},
+	{40, 	IDT_EDIT_BOOKMARK_CLEAR, 	TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, 0},
+	{41, 	IDT_EDIT_BOOKMARK_CLEARLINE, 	TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, 0},
+	{42, 	IDT_EDIT_BOOKMARK_CLEARAUTO, 	TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, 0},
 };
 // NOLINTEND(readability-redundant-zero-initializer)
 
@@ -414,6 +420,13 @@ static bool	flagDisplayHelp			= false;
 
 static inline bool IsDocumentModified() noexcept {
 	return bDocumentModified || iCurrentEncoding != iOriginalEncoding;
+}
+
+// the bookmark kinds are numbered from the user bookmark to Find All, so starting after the user bookmark keeps it.
+static void ClearBookmarkKinds(int firstMarker) noexcept {
+	for (int marker = firstMarker; marker <= MarkerNumber_FindAllMark; marker++) {
+		SciCall_MarkerDeleteAll(marker);
+	}
 }
 
 // F3 / Shift+F3 follow the Find dialog's "Bookmark matched line" option: every match found is marked,
@@ -2484,6 +2497,8 @@ void MsgInitMenu(HWND hwnd, WPARAM wParam, LPARAM lParam) noexcept {
 	const bool nonEmpty = SciCall_GetLength() != 0;
 	static const uint16_t menuRequiresDoc[] = {
 		BME_EDIT_BOOKMARKCLEAR,
+		BME_EDIT_BOOKMARKCLEARAUTO,
+		BME_EDIT_BOOKMARKCLEARLINE,
 		BME_EDIT_BOOKMARKNEXT,
 		BME_EDIT_BOOKMARKPREV,
 		BME_EDIT_BOOKMARKSELECT,
@@ -3779,12 +3794,14 @@ LRESULT MsgCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
 
 	// Main Bookmark Functions
 	case BME_EDIT_BOOKMARKNEXT:
-	case BME_EDIT_BOOKMARKPREV: {
+	case BME_EDIT_BOOKMARKPREV:
+	case IDT_EDIT_BOOKMARK_NEXT:
+	case IDT_EDIT_BOOKMARK_PREV: {
 		const Sci_Position iPos = SciCall_GetCurrentPos();
 		const Sci_Line iLine = SciCall_LineFromPosition(iPos);
 
 		Sci_Line iNextLine;
-		if (LOWORD(wParam) == BME_EDIT_BOOKMARKNEXT) {
+		if (LOWORD(wParam) == BME_EDIT_BOOKMARKNEXT || LOWORD(wParam) == IDT_EDIT_BOOKMARK_NEXT) {
 			iNextLine = SciCall_MarkerNext(iLine + 1, MarkerBitmask_AnyBookmark);
 			if (iNextLine < 0) {
 				iNextLine = SciCall_MarkerNext(0, MarkerBitmask_AnyBookmark);
@@ -3809,6 +3826,7 @@ LRESULT MsgCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
 	break;
 
 	case BME_EDIT_BOOKMARKTOGGLE:
+	case IDT_EDIT_BOOKMARK_TOGGLE:
 		EditToggleBookmarkAt(-1);
 		break;
 
@@ -3816,10 +3834,26 @@ LRESULT MsgCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
 		EditBookmarkSelectAll();
 		break;
 
-	case BME_EDIT_BOOKMARKCLEAR:
-		for (int marker = MarkerNumber_Bookmark; marker <= MarkerNumber_FindAllMark; marker++) {
-			SciCall_MarkerDeleteAll(marker);
+	case BME_EDIT_BOOKMARKCLEARLINE:
+	case IDT_EDIT_BOOKMARK_CLEARLINE: {
+		// only the automatic kinds, user bookmarks stay; a marker can be added more than once to a line.
+		const Sci_Line iLine = SciCall_LineFromPosition(SciCall_GetCurrentPos());
+		for (int marker = MarkerNumber_OccurrenceMark; marker <= MarkerNumber_FindAllMark; marker++) {
+			while (SciCall_MarkerGet(iLine) & (1 << marker)) {
+				SciCall_MarkerDelete(iLine, marker);
+			}
 		}
+	}
+	break;
+
+	case BME_EDIT_BOOKMARKCLEAR:
+	case IDT_EDIT_BOOKMARK_CLEAR:
+		ClearBookmarkKinds(MarkerNumber_Bookmark);
+		break;
+
+	case BME_EDIT_BOOKMARKCLEARAUTO:
+	case IDT_EDIT_BOOKMARK_CLEARAUTO:
+		ClearBookmarkKinds(MarkerNumber_OccurrenceMark);
 		break;
 
 	case IDT_EDIT_FIND:

@@ -573,7 +573,7 @@ How rows are grouped:
 | `tools/starttm.cpp` | Startup-time benchmark |
 | `tools/readme.txt` | Image sourcing and conversion notes |
 | `tools/lang/*` (85) | Keyword/API source lists per language (+ SQL dialects) |
-| `tools/images/**` (61 svg, 324 png) | Source art for toolbar, icons, cursors (+ **[new]** `CodePretty`, `SpellCheck`, `ResetZoom`, `LineComment`, `MarkdownBold`, `MarkdownItalic`, `MarkdownCode`, `About`, `MarkdownLink`, `MarkdownClear`) |
+| `tools/images/**` (67 svg, 354 png) | Source art for toolbar, icons, cursors (+ **[new]** `CodePretty`, `SpellCheck`, `ResetZoom`, `LineComment`, `MarkdownBold`, `MarkdownItalic`, `MarkdownCode`, `About`, `MarkdownLink`, `MarkdownClear`, `BookmarkToggle`, `BookmarkPrev`, `BookmarkNext`, `BookmarkClear`, `AutoMarksClearLine`, `AutoMarksClear`) |
 | `wiki/` (0) | Uninitialized wiki submodule |
 
 ---
@@ -594,8 +594,14 @@ How rows are grouped:
 | 35 | 34 `About` (blue info `i`) | `IDT_HELP_ABOUT` 40634 | button | Opens the About dialog (same as Help → About; no keyboard shortcut) | Always |
 | 36 | 35 `MarkdownLink` (blue/grey chain link) | `IDT_EDIT_MARKDOWN_LINK` 40635 | button | `EditEncloseSelection(L"[⇗](", L")")` via `EditMarkdownLinkSelection()`: selection (spaces and line endings trimmed) becomes the link target; does nothing if it spans lines | Same as the other Markdown buttons |
 | 37 | 36 `MarkdownClear` (eraser on a blue line) | `IDT_EDIT_MARKDOWN_CLEAR` 40636 | button | `EditClearMarkdownFormatting()` (`src/Edit.cpp`): expands the selection over enclosing markers, then strips inline and heading/quote Markdown; list/task markers and unpaired markers stay | Same as the other Markdown buttons |
+| 38 | 37 `BookmarkToggle` (green ribbon) | `IDT_EDIT_BOOKMARK_TOGGLE` 40637 | button | `EditToggleBookmarkAt(-1)` (= Ctrl+F2) | Always |
+| 39 | 38 `BookmarkPrev` (ribbon + blue up arrow) | `IDT_EDIT_BOOKMARK_PREV` 40638 | button | previous bookmark of any kind (= Shift+F2) | Always |
+| 40 | 39 `BookmarkNext` (ribbon + blue down arrow) | `IDT_EDIT_BOOKMARK_NEXT` 40639 | button | next bookmark of any kind (= F2) | Always |
+| 41 | 40 `BookmarkClear` (ribbon + red ✕) | `IDT_EDIT_BOOKMARK_CLEAR` 40640 | button | removes all four bookmark kinds (= Alt+F2) | Always |
+| 42 | 41 `AutoMarksClearLine` (3 coloured dots + red minus) | `IDT_EDIT_BOOKMARK_CLEARLINE` 40641 | button | removes the automatic marks from the current line, keeps the user bookmark (= Bookmarks → Clear Automatic Marks on Line, `BME_EDIT_BOOKMARKCLEARLINE` 40259) | Always |
+| 43 | 42 `AutoMarksClear` (3 coloured dots + red ✕) | `IDT_EDIT_BOOKMARK_CLEARAUTO` 40642 | button | `ClearBookmarkKinds(MarkerNumber_OccurrenceMark)`: removes all automatic marks, keeps user bookmarks (= Bookmarks → Clear All Automatic Marks, `BME_EDIT_BOOKMARKCLEARAUTO` 40593) | Always |
 
-- **Default layout** (`DefaultToolbarButtons`, `src/Notepad4.cpp:71`): `0 1 27 2 0 22 0 4 18 0 10 11 0 12 0 24 0 13 14 30 0 28 0 31 0 29 0 32 33 34 36 0 37`.
+- **Default layout** (`DefaultToolbarButtons`, `src/Notepad4.cpp:71`): `0 1 27 2 0 22 0 4 18 0 10 11 0 38 39 40 41 0 42 43 0 12 0 24 0 13 14 30 0 28 0 31 0 29 0 32 33 34 36 0 37`.
   - Reset Zoom sits after Zoom In/Out; Pretty, Toggle Line Comment and Spell Check each get their own group, Bold, Italic, Code and Link share a group, and Clear Markdown Formatting comes last in its own group. Browse, Save Copy and About are no longer in the default, and Favorites moved after Open/Save (Customize Toolbar can add the others back).
 - **Markdown buttons:** each one wraps the selection in its marker and keeps the original text selected.
   - Ctrl+B (`CMD_MARKDOWN_BOLD` 40590) and Ctrl+I (`CMD_MARKDOWN_ITALIC` 40591) do the same in a Markdown document with a selection, and nothing elsewhere. Find Matching Brace and Split Lines no longer have a shortcut.

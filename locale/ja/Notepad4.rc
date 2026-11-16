@@ -388,6 +388,9 @@ BEGIN
 			MENUITEM SEPARATOR
 			MENUITEM "すべて選択(&S)\tAlt+F6",			BME_EDIT_BOOKMARKSELECT
 			MENUITEM "すべて消去(&C)\tAlt+F2",			BME_EDIT_BOOKMARKCLEAR
+			MENUITEM SEPARATOR
+			MENUITEM "Clear Automatic Marks on Line(&L)",	BME_EDIT_BOOKMARKCLEARLINE
+			MENUITEM "Clear All Automatic Marks(&U)\tAlt+Shift+F2",	BME_EDIT_BOOKMARKCLEARAUTO
 		END
 		POPUP "移動(&G)"
 		BEGIN
@@ -989,6 +992,7 @@ BEGIN
     VK_F2,          BME_EDIT_BOOKMARKNEXT,      VIRTKEY, NOINVERT
     VK_F2,          BME_EDIT_BOOKMARKTOGGLE,    VIRTKEY, CONTROL, NOINVERT
     VK_F2,          BME_EDIT_BOOKMARKCLEAR,     VIRTKEY, ALT, NOINVERT
+    VK_F2,          BME_EDIT_BOOKMARKCLEARAUTO, VIRTKEY, SHIFT, ALT, NOINVERT
     VK_F2,          BME_EDIT_BOOKMARKPREV,      VIRTKEY, SHIFT, NOINVERT
     VK_F3,          IDM_EDIT_FINDNEXT,          VIRTKEY, NOINVERT
     VK_F3,          IDM_EDIT_FINDPREV,          VIRTKEY, SHIFT, NOINVERT
@@ -1867,6 +1871,12 @@ BEGIN
     IDT_HELP_ABOUT          "Notepad4k について"
     IDT_EDIT_MARKDOWN_LINK  "Markdown Link [⇗](...)"
     IDT_EDIT_MARKDOWN_CLEAR "Clear Markdown Formatting"
+    IDT_EDIT_BOOKMARK_TOGGLE "ブックマーク(しおり): 指定の切替"
+    IDT_EDIT_BOOKMARK_PREV  "ブックマーク(しおり): 前へ"
+    IDT_EDIT_BOOKMARK_NEXT  "ブックマーク(しおり): 次へ"
+    IDT_EDIT_BOOKMARK_CLEAR "ブックマーク(しおり): すべて消去"
+    IDT_EDIT_BOOKMARK_CLEARLINE "ブックマーク(しおり): Clear Automatic Marks on Line"
+    IDT_EDIT_BOOKMARK_CLEARAUTO "ブックマーク(しおり): Clear All Automatic Marks"
 END
 
 STRINGTABLE
