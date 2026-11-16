@@ -53,10 +53,30 @@ A personal fork of [Notepad4](https://github.com/zufuliu/notepad4), a lightweigh
 | **Ctrl+H** | Open Replace (selection used as the find text) | Same |
 | **Ctrl+Alt+F2** / **+Shift** | Extend the selection to the next / previous match | Same |
 
-- When F3 takes the selection as the search text, it searches plain text: Regex and Transform backslashes are turned off, while Match Case and Whole Word are kept.
+- When F3 takes the selection as the search text, it searches plain text: Regex, Wildcard search and Transform backslashes are turned off, while Match Case and Whole Word are kept.
 - The Find dialog, when open, shows the new search text.
+- With the Find dialog's "Bookmark matched line" ticked, F3 / Shift+F3 also bookmark the line of each match they find.
 - Column selections and selections of 1 MB or more are not used as search text.
 - Filling the Find dialog from the selection also needs Settings → Select and Edit Options → Copy Selection as Find Text (on by default).
+
+### Find dialog options and F3
+
+| Find dialog item | F3 repeating the current search | F3 taking a new selection or word |
+|---|---|---|
+| Match case | ✅ applies | ✅ kept |
+| Match whole word only | ✅ applies | ✅ kept |
+| Match beginning of word only | ✅ applies | ✅ kept |
+| Regular expression search | ✅ applies | ❌ turned off (plain text) |
+| Regex dot (.) match newline | ✅ applies (with regex) | ❌ turned off |
+| Use Boost Regex | ✅ applies (with regex) | ❌ not used, regex is off |
+| Transform backslashes | ✅ applies | ❌ turned off |
+| Wildcard search | ✅ applies | ❌ turned off |
+| Don't wrap around | ✅ applies | ✅ applies |
+| Bookmark matched line | ✅ applies | ✅ applies |
+| Close after find, Transparent on losing focus, Use monospaced font | ➖ dialog only | ➖ |
+| Find Next / Find Previous buttons | same as F3 / Shift+F3, but they don't bookmark | ➖ |
+| Find All, Select All | ❌ not part of F3 | ❌ |
+| Clear History, Goto Replace, Save / Reset Position | ➖ dialog only | ➖ |
 
 ## Build
 

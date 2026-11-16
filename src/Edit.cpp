@@ -5027,9 +5027,9 @@ extern int iFindReplaceOption;
 extern int iFindReplaceOpacityLevel;
 extern bool bSaveFindReplace;
 
-void EditSaveSelectionAsFindText(EditFindReplace &efr, int menu, bool findSelection) noexcept {
+bool EditSaveSelectionAsFindText(EditFindReplace &efr, int menu, bool findSelection) noexcept {
 	if (!findSelection && (iSelectOption & SelectOption_CopySelectionAsFindText) == 0) {
-		return;
+		return false;
 	}
 	size_t cchSelection = SciCall_GetSelTextLength();
 	if (cchSelection == 0 && findSelection) {
@@ -5049,22 +5049,19 @@ void EditSaveSelectionAsFindText(EditFindReplace &efr, int menu, bool findSelect
 		NP2HeapFree(mszSelection);
 
 		efr.fuFlags &= SCFIND_REGEXP - 1; // clear all regex flags
-		efr.option &= ~FindReplaceOption_TransformBackslash;
+		// the selection is searched literally, so '*' and '?' are no wildcards either.
+		efr.option &= ~(FindReplaceOption_TransformBackslash | FindReplaceOption_WildcardSearch);
 		efr.status |= FindReplaceStatus_HasFindText | FindReplaceStatus_FindUpdated | FindReplaceStatus_ReplaceUpdated;
 
 		switch (menu) {
-		case IDM_EDIT_SAVEFIND:
-			break;
-
 		case CMD_FINDNEXTSEL:
-			EditFindNext(efr, false);
-			break;
+			return EditFindNext(efr, false);
 
 		case CMD_FINDPREVSEL:
-			EditFindPrev(efr, false);
-			break;
+			return EditFindPrev(efr, false);
 		}
 	}
+	return false;
 }
 
 // true when the selection is exactly a match of the current find text, e.g. selected by the previous F3,
@@ -5554,6 +5551,7 @@ static INT_PTR CALLBACK EditFindReplaceDlgProc(HWND hwnd, UINT umsg, WPARAM wPar
 			SetDlgItemText(hwnd, IDC_FINDTEXT, efr.wszFind);
 			CheckDlgButton(hwnd, IDC_FINDREGEXP, BST_UNCHECKED);
 			CheckDlgButton(hwnd, IDC_FINDTRANSFORMBS, BST_UNCHECKED);
+			CheckDlgButton(hwnd, IDC_WILDCARDSEARCH, BST_UNCHECKED);
 			PostMessage(hwnd, WM_NEXTDLGCTL, AsInteger<WPARAM>(GetDlgItem(hwnd, IDC_FINDTEXT)), TRUE);
 		}
 		break;
@@ -5759,9 +5757,9 @@ bool EditFindReplace::Prepare(UINT mask) noexcept {
 //
 // EditFindNext()
 //
-void EditFindNext(EditFindReplace &efr, bool fExtendSelection) noexcept {
+bool EditFindNext(EditFindReplace &efr, bool fExtendSelection) noexcept {
 	if (!efr.Prepare(FindReplaceStatus_FindUpdated)) {
-		return;
+		return false;
 	}
 
 	const Sci_Position iSelPos = SciCall_GetCurrentPos();
@@ -5796,15 +5794,16 @@ void EditFindNext(EditFindReplace &efr, bool fExtendSelection) noexcept {
 			ShowNotificationMessage(notifyPos, IDS_ZERO_LENGTH_MATCH);
 		}
 	}
+	return iPos >= 0;
 }
 
 //=============================================================================
 //
 // EditFindPrev()
 //
-void EditFindPrev(EditFindReplace &efr, bool fExtendSelection) noexcept {
+bool EditFindPrev(EditFindReplace &efr, bool fExtendSelection) noexcept {
 	if (!efr.Prepare(FindReplaceStatus_FindUpdated)) {
-		return;
+		return false;
 	}
 
 	const Sci_Position iSelPos = SciCall_GetCurrentPos();
@@ -5840,6 +5839,7 @@ void EditFindPrev(EditFindReplace &efr, bool fExtendSelection) noexcept {
 			ShowNotificationMessage(notifyPos, IDS_ZERO_LENGTH_MATCH);
 		}
 	}
+	return iPos >= 0;
 }
 
 //=============================================================================

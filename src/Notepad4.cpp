@@ -416,6 +416,16 @@ static inline bool IsDocumentModified() noexcept {
 	return bDocumentModified || iCurrentEncoding != iOriginalEncoding;
 }
 
+// F3 / Shift+F3 follow the Find dialog's "Bookmark matched line" option.
+static void BookmarkFoundLine() noexcept {
+	if (iFindReplaceOption & FindReplaceOption_FindAllBookmark) {
+		const Sci_Line line = SciCall_LineFromPosition(SciCall_GetSelectionStart());
+		if ((SciCall_MarkerGet(line) & MarkerBitmask_Bookmark) == 0) {
+			SciCall_MarkerAdd(line, MarkerNumber_Bookmark);
+		}
+	}
+}
+
 // selects the word at the caret, or the next word on the same line when the caret is before it.
 // unlike EditSelectWord(), it never falls back to selecting the whole line.
 static void SelectWordAtCaret() noexcept {
@@ -3839,11 +3849,14 @@ LRESULT MsgCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
 				SelectWordAtCaret();
 			}
 			if (!SciCall_IsSelectionEmpty() && SciCall_GetSelTextLength() < NP2_FIND_REPLACE_LIMIT_SEL && !EditSelectionIsFindMatch(efrData)) {
-				EditSaveSelectionAsFindText(efrData, (LOWORD(wParam) == IDM_EDIT_FINDNEXT) ? CMD_FINDNEXTSEL : CMD_FINDPREVSEL, true);
+				if (EditSaveSelectionAsFindText(efrData, (LOWORD(wParam) == IDM_EDIT_FINDNEXT) ? CMD_FINDNEXTSEL : CMD_FINDPREVSEL, true)) {
+					BookmarkFoundLine();
+				}
 				if (hDlgFindReplace != nullptr) {
 					SetDlgItemText(hDlgFindReplace, IDC_FINDTEXT, efrData.wszFind);
 					CheckDlgButton(hDlgFindReplace, IDC_FINDREGEXP, BST_UNCHECKED);
 					CheckDlgButton(hDlgFindReplace, IDC_FINDTRANSFORMBS, BST_UNCHECKED);
+					CheckDlgButton(hDlgFindReplace, IDC_WILDCARDSEARCH, BST_UNCHECKED);
 				}
 				break;
 			}
@@ -3859,11 +3872,15 @@ LRESULT MsgCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
 
 		switch (LOWORD(wParam)) {
 		case IDM_EDIT_FINDNEXT:
-			EditFindNext(efrData, false);
+			if (EditFindNext(efrData, false)) {
+				BookmarkFoundLine();
+			}
 			break;
 
 		case IDM_EDIT_FINDPREV:
-			EditFindPrev(efrData, false);
+			if (EditFindPrev(efrData, false)) {
+				BookmarkFoundLine();
+			}
 			break;
 
 		case IDM_EDIT_REPLACENEXT:
