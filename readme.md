@@ -30,13 +30,33 @@ A personal fork of [Notepad4](https://github.com/zufuliu/notepad4), a lightweigh
 - **Default save location:** Settings → Default Save Location... sets the folder where Save and Save As start for a file that hasn't been saved yet.
   - The dialog shows the current value; "..." browses for a folder; leave it empty to turn it off.
   - It's stored as `[Settings2] DefaultDirectory` and also used by File → Open when no file is loaded.
-- **F3 / Shift+F3 search for the selection:** with text selected, F3 and Shift+F3 search for that text (like Ctrl+F3).
-  - Repeating F3 on a match keeps the current search, so regex searches continue; the Find dialog shows the new text.
+- **Search defaults to the selection:** F3, Shift+F3 and Ctrl+F start from the selected text or the word at the cursor (see [Search modes](#search-modes)).
+  - Turn it on or off with Search → Search Defaults to Selection (on by default; saved as `[Settings] SearchDefaultToSelection`).
+  - Ctrl+F3 / Ctrl+Shift+F3 and the Save Find Text menu item with its Alt+F3 shortcut are removed.
 - **Suggested file name:** for a file that hasn't been saved yet, the Save dialog proposes a name made of the text's first 5 words.
   - Whitespace and punctuation are skipped, e.g. `# Meeting notes, budget` → `Meeting notes budget.txt`.
   - It stops at 80 characters; a reserved device name such as `CON` is never proposed.
 - **Branding:** a refreshed app icon and the name "Notepad4k", shown in the window title, message boxes, the About box, the Help menu and the exe's version info.
   - The About box marks this as a custom build and lists the original copyrights under their own heading.
+
+## Search modes
+
+| Key | Option on (default) | Option off |
+|---|---|---|
+| **F3** / **Shift+F3** with text selected | Search forward / backward for the selection | Repeat the current search |
+| **F3** / **Shift+F3**, cursor in a word | Select the word and search for it | Repeat the current search |
+| **F3** / **Shift+F3**, cursor before a word | Select the next word on the line and search for it | Repeat the current search |
+| **F3** / **Shift+F3**, cursor in trailing whitespace | Repeat the current search | Repeat the current search |
+| **F3** / **Shift+F3** on the last match | Continue the current search, regex included | Continue the current search |
+| **Ctrl+F**, nothing selected | Select the word at the cursor (or the next one) and open Find with it | Open Find |
+| **Ctrl+F** with text selected | Open Find with the selection | Open Find with the selection |
+| **Ctrl+H** | Open Replace (selection used as the find text) | Same |
+| **Ctrl+Alt+F2** / **+Shift** | Extend the selection to the next / previous match | Same |
+
+- When F3 takes the selection as the search text, it searches plain text: Regex and Transform backslashes are turned off, while Match Case and Whole Word are kept.
+- The Find dialog, when open, shows the new search text.
+- Column selections and selections of 1 MB or more are not used as search text.
+- Filling the Find dialog from the selection also needs Settings → Select and Edit Options → Copy Selection as Find Text (on by default).
 
 ## Build
 

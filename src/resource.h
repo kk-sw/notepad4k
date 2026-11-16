@@ -610,7 +610,7 @@
 #define IDM_EDIT_FINDMATCHINGBRACE		40362	// Ctrl+B
 #define IDM_EDIT_SELTOMATCHINGBRACE		40363	// Ctrl+Shift+B
 #define IDM_EDIT_FIND					40364	// Ctrl+F
-#define IDM_EDIT_SAVEFIND				40365	// Alt+F3
+#define IDM_EDIT_SAVEFIND				40365	// Alt+F3 in the Find dialog
 #define IDM_EDIT_FINDNEXT				40366	// F3
 #define IDM_EDIT_FINDPREV				40367	// Shift+F3
 #define IDM_EDIT_REPLACE				40368	// Ctrl+H
@@ -776,8 +776,8 @@
 #define CMD_ONLINE_SEARCH_WIKI			40564
 #define CMD_CUSTOM_ACTION1				40565	// Ctrl+Shift+1
 #define CMD_CUSTOM_ACTION2				40566	// Ctrl+Shift+2
-#define CMD_FINDNEXTSEL					40567	// Ctrl+F3
-#define CMD_FINDPREVSEL					40568	// Ctrl+Shift+F3
+#define CMD_FINDNEXTSEL					40567	// F3 with a selection
+#define CMD_FINDPREVSEL					40568	// Shift+F3 with a selection
 #define CMD_INCLINELIMIT				40569	// Alt++
 #define CMD_DECLINELIMIT				40570	// Alt+-
 #define CMD_ENCLOSE_TRIPLE_SQ			40571	// Ctrl+3
@@ -801,6 +801,7 @@
 #define CMD_EVALUATE_JS_EXPR			40589
 #define CMD_MARKDOWN_BOLD				40590	// Ctrl+B
 #define CMD_MARKDOWN_ITALIC				40591	// Ctrl+I
+#define IDM_SET_SEARCH_DEFAULT_SELECTION	40592
 
 #define IDT_FILE_NEW					40600
 #define IDT_FILE_OPEN					40601

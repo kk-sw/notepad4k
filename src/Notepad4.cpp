@@ -138,6 +138,8 @@ bool	bShowWordWrapSymbols;
 bool	bWordWrapSelectSubLine;
 static bool bShowUnicodeControlCharacter;
 static bool bMatchBraces;
+// F3 / Shift+F3 search for a new selection instead of repeating the current search.
+static bool bSearchDefaultToSelection;
 static bool bShowIndentGuides;
 static bool bHighlightCurrentBlock;
 bool	bHighlightCurrentSubLine;
@@ -412,6 +414,24 @@ static bool	flagDisplayHelp			= false;
 
 static inline bool IsDocumentModified() noexcept {
 	return bDocumentModified || iCurrentEncoding != iOriginalEncoding;
+}
+
+// selects the word at the caret, or the next word on the same line when the caret is before it.
+// unlike EditSelectWord(), it never falls back to selecting the whole line.
+static void SelectWordAtCaret() noexcept {
+	const Sci_Position iPos = SciCall_GetCurrentPos();
+	Sci_Position iWordStart = SciCall_WordStartPosition(iPos, true);
+	Sci_Position iWordEnd = SciCall_WordEndPosition(iPos, true);
+	if (iWordStart == iWordEnd) {
+		iWordStart = SciCall_WordEndPosition(iPos, false);
+		iWordEnd = SciCall_WordEndPosition(iWordStart, true);
+		if (iWordEnd > SciCall_GetLineEndPosition(SciCall_LineFromPosition(iPos))) {
+			return;
+		}
+	}
+	if (iWordStart < iWordEnd) {
+		SciCall_SetSel(iWordStart, iWordEnd);
+	}
 }
 
 // a new document can become Markdown, a file from disk must already be one.
@@ -2628,6 +2648,7 @@ void MsgInitMenu(HWND hwnd, WPARAM wParam, LPARAM lParam) noexcept {
 	CheckCmd(hmenu, IDM_VIEW_FULLSCREEN_HIDE_TITLE, iFullScreenMode & FullScreenMode_HideCaption);
 
 	CheckCmd(hmenu, IDM_VIEW_MATCHBRACES, bMatchBraces);
+	CheckCmd(hmenu, IDM_SET_SEARCH_DEFAULT_SELECTION, bSearchDefaultToSelection);
 	EditSpellCheckInitMenu(hmenu);
 	CheckCmd(hmenu, IDM_VIEW_HIGHLIGHTCURRENT_BLOCK, bHighlightCurrentBlock);
 	i = IDM_VIEW_HIGHLIGHTCURRENTLINE_NONE + static_cast<int>(iHighlightCurrentLine);
@@ -3783,6 +3804,10 @@ LRESULT MsgCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
 	case IDM_EDIT_FIND:
 	case IDM_EDIT_REPLACE: {
 		const bool bReplace = (LOWORD(wParam) == IDM_EDIT_REPLACE) || (LOWORD(wParam) == IDT_EDIT_REPLACE);
+		// Ctrl+F follows the same word rule as F3, so the dialog opens with that word.
+		if (bSearchDefaultToSelection && !bReplace && SciCall_IsSelectionEmpty()) {
+			SelectWordAtCaret();
+		}
 		if (hDlgFindReplace == nullptr) {
 			hDlgFindReplace = EditFindReplaceDlg(hwndEdit, efrData, bReplace);
 		} else {
@@ -3807,17 +3832,21 @@ LRESULT MsgCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
 			break;
 		}
 
-		// F3 / Shift+F3 search for newly selected text.
-		if ((LOWORD(wParam) == IDM_EDIT_FINDNEXT || LOWORD(wParam) == IDM_EDIT_FINDPREV)
-			&& !SciCall_IsSelectionEmpty() && !SciCall_IsRectangularSelection()
-			&& SciCall_GetSelTextLength() < NP2_FIND_REPLACE_LIMIT_SEL && !EditSelectionIsFindMatch(efrData)) {
-			EditSaveSelectionAsFindText(efrData, (LOWORD(wParam) == IDM_EDIT_FINDNEXT) ? CMD_FINDNEXTSEL : CMD_FINDPREVSEL, true);
-			if (hDlgFindReplace != nullptr) {
-				SetDlgItemText(hDlgFindReplace, IDC_FINDTEXT, efrData.wszFind);
-				CheckDlgButton(hDlgFindReplace, IDC_FINDREGEXP, BST_UNCHECKED);
-				CheckDlgButton(hDlgFindReplace, IDC_FINDTRANSFORMBS, BST_UNCHECKED);
+		// F3 / Shift+F3 search for newly selected text, or for the word at the caret when nothing is selected.
+		if (bSearchDefaultToSelection && (LOWORD(wParam) == IDM_EDIT_FINDNEXT || LOWORD(wParam) == IDM_EDIT_FINDPREV)
+			&& !SciCall_IsRectangularSelection()) {
+			if (SciCall_IsSelectionEmpty()) {
+				SelectWordAtCaret();
 			}
-			break;
+			if (!SciCall_IsSelectionEmpty() && SciCall_GetSelTextLength() < NP2_FIND_REPLACE_LIMIT_SEL && !EditSelectionIsFindMatch(efrData)) {
+				EditSaveSelectionAsFindText(efrData, (LOWORD(wParam) == IDM_EDIT_FINDNEXT) ? CMD_FINDNEXTSEL : CMD_FINDPREVSEL, true);
+				if (hDlgFindReplace != nullptr) {
+					SetDlgItemText(hDlgFindReplace, IDC_FINDTEXT, efrData.wszFind);
+					CheckDlgButton(hDlgFindReplace, IDC_FINDREGEXP, BST_UNCHECKED);
+					CheckDlgButton(hDlgFindReplace, IDC_FINDTRANSFORMBS, BST_UNCHECKED);
+				}
+				break;
+			}
 		}
 
 		if (!efrData.HasFindText() && LOWORD(wParam) != IDM_EDIT_REPLACENEXT) {
@@ -4119,6 +4148,10 @@ LRESULT MsgCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
 	case IDM_VIEW_SHOWCALLTIP_ABGR:
 		callTipInfo.showCallTip = static_cast<ShowCallTip>(LOWORD(wParam) - IDM_VIEW_SHOWCALLTIP_OFF);
 		SciCall_SetMouseDwellTime((callTipInfo.showCallTip == ShowCallTip_None)? SC_TIME_FOREVER : CallTipDefaultMouseDwellTime);
+		break;
+
+	case IDM_SET_SEARCH_DEFAULT_SELECTION:
+		bSearchDefaultToSelection = !bSearchDefaultToSelection;
 		break;
 
 	case IDM_VIEW_MATCHBRACES:
@@ -4634,8 +4667,6 @@ LRESULT MsgCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
 		EditSelectionAction(LOWORD(wParam));
 		break;
 
-	case CMD_FINDNEXTSEL:
-	case CMD_FINDPREVSEL:
 	case IDM_EDIT_SAVEFIND:
 		EditSaveSelectionAsFindText(efrData, LOWORD(wParam), true);
 		break;
@@ -5284,6 +5315,7 @@ void LoadSettings() noexcept {
 	bShowUnicodeControlCharacter = section.GetBool(L"ShowUnicodeControlCharacter", false);
 
 	bMatchBraces = section.GetBool(L"MatchBraces", true);
+	bSearchDefaultToSelection = section.GetBool(L"SearchDefaultToSelection", true);
 	spellCheckConfig.bEnabled = section.GetBool(L"SpellCheck", false);
 	section.GetString(L"SpellCheckLanguage", L"", spellCheckConfig.wszLanguage);
 	bHighlightCurrentBlock = section.GetBool(L"HighlightCurrentBlock", true);
@@ -5588,6 +5620,7 @@ void SaveSettings(bool bSaveSettingsNow) noexcept {
 	section.SetBoolEx(L"WordWrapSelectSubLine", bWordWrapSelectSubLine, false);
 	section.SetBoolEx(L"ShowUnicodeControlCharacter", bShowUnicodeControlCharacter, false);
 	section.SetBoolEx(L"MatchBraces", bMatchBraces, true);
+	section.SetBoolEx(L"SearchDefaultToSelection", bSearchDefaultToSelection, true);
 	section.SetBoolEx(L"SpellCheck", spellCheckConfig.bEnabled, false);
 	section.SetStringEx(L"SpellCheckLanguage", spellCheckConfig.wszLanguage, L"");
 	section.SetBoolEx(L"HighlightCurrentBlock", bHighlightCurrentBlock, true);
