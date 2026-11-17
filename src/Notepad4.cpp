@@ -60,15 +60,17 @@ HWND	hwndEdit;
 HWND	hwndMain;
 static HMENU hmenuMain;
 HWND	hDlgFindReplace = nullptr;
+HWND	hDlgBookmarkList = nullptr;
 HWND	hDlgWarnLineEnding = nullptr;
 static bool bInitDone = false;
 static HACCEL hAccMain;
 static HACCEL hAccFindReplace;
+static HACCEL hAccBookmarkList;
 static HICON hTrayIcon = nullptr;
 static UINT uTrayIconDPI = 0;
 
 #define TOOLBAR_COMMAND_BASE	IDT_FILE_NEW
-#define DefaultToolbarButtons	L"0 1 27 2 0 22 0 4 18 0 10 11 0 38 39 40 41 0 42 43 0 12 0 24 0 13 14 30 0 28 0 31 0 29 0 32 33 34 36 0 37"
+#define DefaultToolbarButtons	L"0 1 27 2 0 22 0 4 18 0 10 11 0 38 39 40 44 41 0 42 43 0 12 0 24 0 13 14 30 0 28 0 31 0 29 0 32 33 34 36 0 37"
 // NOLINTBEGIN(readability-redundant-zero-initializer)
 #if NP2_ENABLE_CUSTOMIZE_TOOLBAR_LABELS
 static TBBUTTON tbbMainWnd[] =
@@ -120,6 +122,7 @@ static const TBBUTTON tbbMainWnd[] =
 	{40, 	IDT_EDIT_BOOKMARK_CLEAR, 	TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, 0},
 	{41, 	IDT_EDIT_BOOKMARK_CLEARLINE, 	TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, 0},
 	{42, 	IDT_EDIT_BOOKMARK_CLEARAUTO, 	TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, 0},
+	{43, 	IDT_EDIT_BOOKMARK_LIST, 	TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, 0},
 };
 // NOLINTEND(readability-redundant-zero-initializer)
 
@@ -435,6 +438,7 @@ static constexpr UINT ToolbarShortcutCommands[][2] = {
 	{ IDT_EDIT_BOOKMARK_TOGGLE, BME_EDIT_BOOKMARKTOGGLE }, { IDT_EDIT_BOOKMARK_PREV, BME_EDIT_BOOKMARKPREV },
 	{ IDT_EDIT_BOOKMARK_NEXT, BME_EDIT_BOOKMARKNEXT }, { IDT_EDIT_BOOKMARK_CLEAR, BME_EDIT_BOOKMARKCLEAR },
 	{ IDT_EDIT_BOOKMARK_CLEARLINE, BME_EDIT_BOOKMARKCLEARLINE }, { IDT_EDIT_BOOKMARK_CLEARAUTO, BME_EDIT_BOOKMARKCLEARAUTO },
+	{ IDT_EDIT_BOOKMARK_LIST, BME_EDIT_BOOKMARKLIST },
 	{ IDT_VIEW_WORDWRAP, IDM_VIEW_WORDWRAP }, { IDT_VIEW_ZOOMIN, IDM_VIEW_ZOOMIN }, { IDT_VIEW_ZOOMOUT, IDM_VIEW_ZOOMOUT },
 	{ IDT_VIEW_RESETZOOM, IDM_VIEW_RESETZOOM }, { IDT_VIEW_SCHEME, IDM_VIEW_SCHEME }, { IDT_VIEW_SCHEMECONFIG, IDM_VIEW_SCHEME_CONFIG },
 	{ IDT_VIEW_TOGGLEFOLDS, IDM_VIEW_FOLD_DEFAULT }, { IDT_VIEW_SPELLCHECK, IDM_VIEW_SPELLCHECK },
@@ -649,9 +653,31 @@ static void CleanUpResources(bool initialized) noexcept {
 	OleUninitialize();
 }
 
+// IsDialogMessage() takes every key while the list has the focus, so its toggle key from the
+// main table is copied into a table of its own that is translated first.
+static HACCEL CreateBookmarkListAccelerators() noexcept {
+	const int count = CopyAcceleratorTable(hAccMain, nullptr, 0);
+	ACCEL *accels = static_cast<ACCEL *>(NP2HeapAlloc(sizeof(ACCEL) * max(count, 1)));
+	CopyAcceleratorTable(hAccMain, accels, count);
+	int toggleCount = 0;
+	for (int i = 0; i < count; i++) {
+		if (accels[i].cmd == BME_EDIT_BOOKMARKLIST) {
+			accels[toggleCount++] = accels[i];
+		}
+	}
+	HACCEL hAccel = (toggleCount != 0) ? CreateAcceleratorTable(accels, toggleCount) : nullptr;
+	NP2HeapFree(accels);
+	return hAccel;
+}
+
 static void DispatchMessageMain(MSG *msg) noexcept {
 	if (hDlgFindReplace != nullptr && (msg->hwnd == hDlgFindReplace || IsChild(hDlgFindReplace, msg->hwnd))) {
 		if (TranslateAccelerator(hDlgFindReplace, hAccFindReplace, msg) || IsDialogMessage(hDlgFindReplace, msg)) {
+			return;
+		}
+	}
+	if (hDlgBookmarkList != nullptr && (msg->hwnd == hDlgBookmarkList || IsChild(hDlgBookmarkList, msg->hwnd))) {
+		if ((hAccBookmarkList != nullptr && TranslateAccelerator(hwndMain, hAccBookmarkList, msg)) || IsDialogMessage(hDlgBookmarkList, msg)) {
 			return;
 		}
 	}
@@ -861,6 +887,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 	InitInstance(hInstance, nShowCmd);
 	hAccMain = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDR_MAINWND));
 	hAccFindReplace = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDR_ACCFINDREPLACE));
+	hAccBookmarkList = CreateBookmarkListAccelerators();
 	MSG msg;
 
 	while (true) {
@@ -1196,6 +1223,11 @@ void InitInstance(HINSTANCE hInstance, int nCmdShow) {
 	}
 
 	bInitDone = true;
+	// opened without activation, the editor keeps the focus at startup
+	if (bShowBookmarkList && !flagStartAsTrayIcon) {
+		hDlgBookmarkList = EditBookmarkListDlg(hwnd, false);
+		UpdateToolbar();
+	}
 	if (SciCall_GetLength() == 0) {
 		UpdateToolbar();
 		UpdateStatusbar();
@@ -1351,6 +1383,10 @@ LRESULT CALLBACK MainWndProc(HWND hwnd, UINT umsg, WPARAM wParam, LPARAM lParam)
 			// Destroy find / replace dialog
 			if (hDlgFindReplace != nullptr) {
 				DestroyWindow(hDlgFindReplace);
+			}
+			// the bookmark list records its position when destroyed, so it goes before SaveAllSettings()
+			if (hDlgBookmarkList != nullptr) {
+				DestroyWindow(hDlgBookmarkList);
 			}
 
 			// call SaveSettings() when hwndToolbar is still valid
@@ -2804,6 +2840,7 @@ void MsgInitMenu(HWND hwnd, WPARAM wParam, LPARAM lParam) noexcept {
 	DisableCmd(hmenu, IDM_VIEW_CLEARWINPOS, bStickyWindowPosition);
 	CheckCmd(hmenu, IDM_VIEW_SINGLEFILEINSTANCE, bSingleFileInstance);
 	CheckCmd(hmenu, IDM_VIEW_ALWAYSONTOP, IsTopMost());
+	CheckCmd(hmenu, BME_EDIT_BOOKMARKLIST, hDlgBookmarkList != nullptr);
 	CheckCmd(hmenu, IDM_VIEW_MINTOTRAY, bMinimizeToTray);
 	CheckCmd(hmenu, IDM_VIEW_TRANSPARENT, bTransparentMode == TransparentMode_Always);
 	CheckCmd(hmenu, IDM_VIEW_TRANSPARENT_INACTIVE, bTransparentMode == TransparentMode_Inactive);
@@ -3923,12 +3960,7 @@ LRESULT MsgCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
 		}
 
 		if (iNextLine >= 0) {
-			editMarkAll.ignoreSelectionUpdate = true;
-			SciCall_EnsureVisible(iNextLine);
-			SciCall_GotoLine(iNextLine);
-			SciCall_SetYCaretPolicy(CARET_SLOP | CARET_STRICT | CARET_EVEN, 10);
-			SciCall_ScrollCaret();
-			SciCall_SetYCaretPolicy(CARET_EVEN, 0);
+			EditGotoBookmarkLine(iNextLine);
 		}
 	}
 	break;
@@ -3940,6 +3972,17 @@ LRESULT MsgCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
 
 	case BME_EDIT_BOOKMARKSELECT:
 		EditBookmarkSelectAll();
+		break;
+
+	case BME_EDIT_BOOKMARKLIST:
+	case IDT_EDIT_BOOKMARK_LIST:
+		if (hDlgBookmarkList == nullptr) {
+			hDlgBookmarkList = EditBookmarkListDlg(hwnd, true);
+			UpdateToolbar();
+		} else {
+			// closes like Esc, which also clears the shown state and updates the toolbar
+			SendWMCommand(hDlgBookmarkList, IDCANCEL);
+		}
 		break;
 
 	case BME_EDIT_BOOKMARKCLEARLINE:
@@ -5170,6 +5213,7 @@ LRESULT MsgNotify(HWND hwnd, WPARAM wParam, LPARAM lParam) {
 		case SCN_MODIFIED:
 			// we only watch SC_MOD_INSERTTEXT | SC_MOD_DELETETEXT
 			++dwCurrentDocReversion;
+			EditBookmarkListDocChanged();
 			UpdateStatusBarCacheLineColumn();
 			AutoSave_Start(false);
 			break;
@@ -5645,6 +5689,7 @@ void LoadSettings() noexcept {
 
 	bShowMenu = section.GetBool(L"ShowMenu", true);
 	bShowToolbar = section.GetBool(L"ShowToolbar", true);
+	bShowBookmarkList = section.GetBool(L"ShowBookmarkList", false);
 	iAutoScaleToolbar = section.GetInt(L"AutoScaleToolbar", USER_DEFAULT_SCREEN_DPI);
 	bShowStatusbar = section.GetBool(L"ShowStatusbar", true);
 
@@ -5697,6 +5742,11 @@ void LoadSettings() noexcept {
 		record.cyStyleSelectDlg = section.GetInt(L"StyleSelectDlgSizeY", 0);
 		record.cxStyleCustomizeDlg = section.GetInt(L"StyleCustomizeDlgSizeX", 0);
 		record.cyStyleCustomizeDlg = section.GetInt(L"StyleCustomizeDlgSizeY", 0);
+
+		record.xBookmarkListDlg = section.GetInt(L"BookmarkListDlgPosX", 0);
+		record.yBookmarkListDlg = section.GetInt(L"BookmarkListDlgPosY", 0);
+		record.cxBookmarkListDlg = section.GetInt(L"BookmarkListDlgSizeX", 0);
+		record.cyBookmarkListDlg = section.GetInt(L"BookmarkListDlgSizeY", 0);
 	}
 
 	section.Free();
@@ -5886,6 +5936,7 @@ void SaveSettings(bool bSaveSettingsNow) noexcept {
 	section.SetStringEx(L"ToolbarButtons", tchToolbarButtons, DefaultToolbarButtons);
 	section.SetBoolEx(L"ShowMenu", bShowMenu, true);
 	section.SetBoolEx(L"ShowToolbar", bShowToolbar, true);
+	section.SetBoolEx(L"ShowBookmarkList", bShowBookmarkList, false);
 	section.SetIntEx(L"AutoScaleToolbar", iAutoScaleToolbar, USER_DEFAULT_SCREEN_DPI);
 	section.SetBoolEx(L"ShowStatusbar", bShowStatusbar, true);
 	section.SetIntEx(L"FullScreenMode", iFullScreenMode, FullScreenMode_Default);
@@ -5949,6 +6000,11 @@ void SaveWindowPosition(WCHAR *pIniSectionBuf) noexcept{
 	section.SetIntEx(L"StyleSelectDlgSizeY", record.cyStyleSelectDlg, 0);
 	section.SetIntEx(L"StyleCustomizeDlgSizeX", record.cxStyleCustomizeDlg, 0);
 	section.SetIntEx(L"StyleCustomizeDlgSizeY", record.cyStyleCustomizeDlg, 0);
+
+	section.SetIntEx(L"BookmarkListDlgPosX", record.xBookmarkListDlg, 0);
+	section.SetIntEx(L"BookmarkListDlgPosY", record.yBookmarkListDlg, 0);
+	section.SetIntEx(L"BookmarkListDlgSizeX", record.cxBookmarkListDlg, 0);
+	section.SetIntEx(L"BookmarkListDlgSizeY", record.cyBookmarkListDlg, 0);
 
 	SaveIniSection(sectionName, pIniSectionBuf);
 }
@@ -6781,6 +6837,7 @@ void UpdateToolbar() noexcept {
 
 	CheckTool(IDT_VIEW_WORDWRAP, fvCurFile.fWordWrap);
 	CheckTool(IDT_VIEW_ALWAYSONTOP, IsTopMost());
+	CheckTool(IDT_EDIT_BOOKMARK_LIST, hDlgBookmarkList != nullptr);
 	const bool spellCheckUsable = EditSpellCheckIsUsable();
 	EnableTool(IDT_VIEW_SPELLCHECK, spellCheckUsable);
 	CheckTool(IDT_VIEW_SPELLCHECK, spellCheckUsable && spellCheckConfig.bEnabled);

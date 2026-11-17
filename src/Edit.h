@@ -340,6 +340,11 @@ struct EditMarkAll {
 
 void EditToggleBookmarkAt(Sci_Position iPos) noexcept;
 void EditBookmarkSelectAll() noexcept;
+void EditGotoBookmarkLine(Sci_Line line) noexcept;
+// the list was open when Notepad4 exited, closing it yourself clears this.
+extern bool bShowBookmarkList;
+HWND EditBookmarkListDlg(HWND hwnd, bool activate) noexcept;
+void EditBookmarkListDocChanged() noexcept;
 
 // auto completion fill-up characters
 #define MAX_AUTO_COMPLETION_FILLUP_LENGTH	32		// Only 32 ASCII punctuation

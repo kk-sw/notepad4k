@@ -118,6 +118,7 @@ void	Style_SetDefaultFont(HWND hwnd, bool bCode) noexcept;
 void	Style_SetIndentGuides(bool bShow) noexcept;
 void	Style_SetBookmark() noexcept;
 void	Style_UpdateBookmarkImages() noexcept;
+COLORREF Style_GetBookmarkKindColor(int marker) noexcept;
 void	Style_UpdateCaret() noexcept;
 void	Style_SetLongLineColors() noexcept;
 void	Style_HighlightCurrentLine() noexcept;

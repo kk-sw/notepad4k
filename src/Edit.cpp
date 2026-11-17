@@ -6229,6 +6229,397 @@ void EditBookmarkSelectAll() noexcept {
 	}
 }
 
+// mark occurrences is not recomputed for the caret move, otherwise the jump itself would change the bookmarks.
+void EditGotoBookmarkLine(Sci_Line line) noexcept {
+	editMarkAll.ignoreSelectionUpdate = true;
+	SciCall_EnsureVisible(line);
+	SciCall_GotoLine(line);
+	SciCall_SetYCaretPolicy(CARET_SLOP | CARET_STRICT | CARET_EVEN, 10);
+	SciCall_ScrollCaret();
+	SciCall_SetYCaretPolicy(CARET_EVEN, 0);
+}
+
+//=============================================================================
+//
+// EditBookmarkListDlg()
+//
+extern HWND hDlgBookmarkList;
+bool bShowBookmarkList;
+
+namespace {
+
+constexpr UINT_PTR BookmarkListTimerId = 1;
+constexpr UINT BookmarkListRefreshPeriod = 400;
+constexpr int BookmarkKindCount = MarkerNumber_FindAllMark + 1;
+constexpr int BookmarkListMaxLineBytes = 512;
+constexpr int BookmarkListColumnKind = 0;
+constexpr int BookmarkListColumnLine = 1;
+constexpr int BookmarkListColumnText = 2;
+
+struct BookmarkListEntry {
+	Sci_Line line;
+	Sci_MarkerMask mask;
+};
+
+// a snapshot of the marked lines; the dialog polls it because markers change from many places
+// (F3, Find All, mark occurrences, auto indent) and Scintilla sends no marker notification to Notepad4.
+struct BookmarkList {
+	BookmarkListEntry *entries;
+	Sci_Line count;
+	Sci_Line capacity;
+	bool docChanged;
+	bool updatingSelection;
+	WCHAR text[BookmarkListMaxLineBytes + 1];
+
+	void Release() noexcept {
+		if (entries != nullptr) {
+			NP2HeapFree(entries);
+		}
+		entries = nullptr;
+		count = capacity = 0;
+	}
+
+	// returns true when the marked lines differ from the previous snapshot.
+	bool Collect(Sci_MarkerMask filter) noexcept {
+		Sci_Line newCount = 0;
+		Sci_Line newCapacity = max<Sci_Line>(capacity, 64);
+		BookmarkListEntry *newEntries = static_cast<BookmarkListEntry *>(NP2HeapAlloc(newCapacity*sizeof(BookmarkListEntry)));
+		Sci_Line line = (filter == 0) ? -1 : SciCall_MarkerNext(0, filter);
+		while (line >= 0) {
+			if (newCount == newCapacity) {
+				newCapacity *= 2;
+				newEntries = static_cast<BookmarkListEntry *>(NP2HeapReAlloc(newEntries, newCapacity*sizeof(BookmarkListEntry)));
+			}
+			newEntries[newCount++] = { line, SciCall_MarkerGet(line) & filter };
+			line = SciCall_MarkerNext(line + 1, filter);
+		}
+		if (newCount == count && (count == 0 || memcmp(newEntries, entries, count*sizeof(BookmarkListEntry)) == 0)) {
+			NP2HeapFree(newEntries);
+			return false;
+		}
+		Release();
+		entries = newEntries;
+		count = newCount;
+		capacity = newCapacity;
+		return true;
+	}
+
+	// index of the first entry at or after the line, or the last entry.
+	int IndexOfLine(Sci_Line line) const noexcept {
+		Sci_Line low = 0;
+		Sci_Line high = count;
+		while (low < high) {
+			const Sci_Line middle = (low + high)/2;
+			if (entries[middle].line < line) {
+				low = middle + 1;
+			} else {
+				high = middle;
+			}
+		}
+		return static_cast<int>(min(low, count - 1));
+	}
+
+	LPWSTR LineText(Sci_Line line) noexcept {
+		Sci_Position start = SciCall_PositionFromLine(line);
+		const Sci_Position end = SciCall_GetLineEndPosition(line);
+		while (start < end && IsASpaceOrTab(SciCall_GetCharAt(start))) {
+			++start;
+		}
+		const int length = static_cast<int>(min<Sci_Position>(end - start, BookmarkListMaxLineBytes));
+		const char *bytes = SciCall_GetRangePointer(start, length);
+		const int cch = MultiByteToWideChar(SciCall_GetCodePage(), 0, bytes, length, text, BookmarkListMaxLineBytes);
+		text[cch] = L'\0';
+		for (int i = 0; i < cch; i++) {
+			if (text[i] == L'\t') {
+				text[i] = L' ';
+			}
+		}
+		return text;
+	}
+};
+
+BookmarkList bookmarkList;
+
+// the kind checkboxes are numbered like the markers, starting with the user bookmark.
+Sci_MarkerMask BookmarkListFilter(HWND hwnd) noexcept {
+	Sci_MarkerMask filter = 0;
+	for (int marker = 0; marker < BookmarkKindCount; marker++) {
+		if (IsButtonChecked(hwnd, IDC_BOOKMARKLIST_USER + marker)) {
+			filter |= 1U << marker;
+		}
+	}
+	return filter;
+}
+
+Sci_Line BookmarkListSelectedLine(HWND hwndLV) noexcept {
+	const int index = ListView_GetNextItem(hwndLV, -1, LVNI_SELECTED);
+	return (index >= 0 && index < bookmarkList.count) ? bookmarkList.entries[index].line : -1;
+}
+
+void BookmarkListSelect(HWND hwndLV, int index) noexcept {
+	bookmarkList.updatingSelection = true;
+	ListView_SetItemState(hwndLV, -1, 0, LVIS_SELECTED | LVIS_FOCUSED);
+	if (index >= 0) {
+		ListView_SetItemState(hwndLV, index, LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED);
+		ListView_EnsureVisible(hwndLV, index, FALSE);
+	}
+	bookmarkList.updatingSelection = false;
+}
+
+// the client width already excludes a visible vertical scroll bar.
+void BookmarkListFitTextColumn(HWND hwndLV) noexcept {
+	RECT rc;
+	GetClientRect(hwndLV, &rc);
+	const int width = rc.right - ListView_GetColumnWidth(hwndLV, BookmarkListColumnKind) - ListView_GetColumnWidth(hwndLV, BookmarkListColumnLine);
+	ListView_SetColumnWidth(hwndLV, BookmarkListColumnText, max(width, 0));
+}
+
+// keeps the selected line selected; on the first fill the bookmark nearest after the caret is selected.
+void BookmarkListRefresh(HWND hwnd, bool initial) noexcept {
+	HWND hwndLV = GetDlgItem(hwnd, IDC_BOOKMARKLIST);
+	Sci_Line selectedLine = initial ? SciCall_LineFromPosition(SciCall_GetCurrentPos()) : BookmarkListSelectedLine(hwndLV);
+	const bool changed = bookmarkList.Collect(BookmarkListFilter(hwnd));
+	if (changed || initial) {
+		ListView_SetItemCountEx(hwndLV, bookmarkList.count, LVSICF_NOSCROLL);
+		BookmarkListFitTextColumn(hwndLV);
+		if (selectedLine < 0) {
+			selectedLine = SciCall_LineFromPosition(SciCall_GetCurrentPos());
+		}
+		BookmarkListSelect(hwndLV, (bookmarkList.count == 0) ? -1 : bookmarkList.IndexOfLine(selectedLine));
+	}
+	if (changed || initial || bookmarkList.docChanged) {
+		InvalidateRect(hwndLV, nullptr, FALSE);
+	}
+	bookmarkList.docChanged = false;
+}
+
+void BookmarkListInitColumns(HWND hwnd, HWND hwndLV) noexcept {
+	const UINT dpi = GetWindowDPI(hwnd);
+	WCHAR tch[64];
+	LVCOLUMN lvc{};
+	lvc.mask = LVCF_FMT | LVCF_WIDTH | LVCF_TEXT;
+	lvc.fmt = LVCFMT_LEFT;
+	lvc.pszText = tch;
+
+	tch[0] = L'\0';
+	lvc.cx = MulDiv(BookmarkKindCount*12 + 8, dpi, USER_DEFAULT_SCREEN_DPI);
+	ListView_InsertColumn(hwndLV, BookmarkListColumnKind, &lvc);
+
+	GetString(IDS_BOOKMARKLIST_LINE, tch, COUNTOF(tch));
+	lvc.fmt = LVCFMT_RIGHT;
+	lvc.cx = MulDiv(64, dpi, USER_DEFAULT_SCREEN_DPI);
+	ListView_InsertColumn(hwndLV, BookmarkListColumnLine, &lvc);
+
+	GetString(IDS_BOOKMARKLIST_TEXT, tch, COUNTOF(tch));
+	lvc.fmt = LVCFMT_LEFT;
+	lvc.cx = MulDiv(200, dpi, USER_DEFAULT_SCREEN_DPI);
+	ListView_InsertColumn(hwndLV, BookmarkListColumnText, &lvc);
+}
+
+// one coloured dot per kind, each kind in its own slot so the kinds line up between rows.
+void BookmarkListDrawKinds(HWND hwndLV, HDC hdc, int index, bool selected) noexcept {
+	RECT rc;
+	if (!ListView_GetSubItemRect(hwndLV, index, BookmarkListColumnKind, LVIR_LABEL, &rc)) {
+		return;
+	}
+	const UINT dpi = GetWindowDPI(hwndLV);
+	const int slot = MulDiv(12, dpi, USER_DEFAULT_SCREEN_DPI);
+	const int diameter = MulDiv(8, dpi, USER_DEFAULT_SCREEN_DPI);
+	const int top = (rc.top + rc.bottom - diameter)/2;
+	const Sci_MarkerMask mask = bookmarkList.entries[index].mask;
+	// an outline keeps the dots visible on the selection colour.
+	HPEN pen = selected ? CreatePen(PS_SOLID, 1, GetSysColor(COLOR_HIGHLIGHTTEXT)) : nullptr;
+	HGDIOBJ oldPen = SelectObject(hdc, selected ? pen : GetStockObject(NULL_PEN));
+	for (int marker = 0; marker < BookmarkKindCount; marker++) {
+		if (mask & (1U << marker)) {
+			HBRUSH brush = CreateSolidBrush(Style_GetBookmarkKindColor(marker));
+			HGDIOBJ oldBrush = SelectObject(hdc, brush);
+			const int left = rc.left + MulDiv(4, dpi, USER_DEFAULT_SCREEN_DPI) + marker*slot;
+			if (marker == MarkerNumber_Bookmark) {
+				// a ribbon like in the margin, the F3 dot has a similar colour
+				const int ribbonTop = top - diameter/4;
+				const int ribbonBottom = top + diameter + diameter/4;
+				const POINT ribbon[] = {
+					{ left + 1, ribbonTop }, { left + diameter, ribbonTop }, { left + diameter, ribbonBottom },
+					{ left + (diameter + 1)/2, ribbonBottom - diameter/3 }, { left + 1, ribbonBottom },
+				};
+				Polygon(hdc, ribbon, COUNTOF(ribbon));
+			} else {
+				Ellipse(hdc, left, top, left + diameter + 1, top + diameter + 1);
+			}
+			SelectObject(hdc, oldBrush);
+			DeleteObject(brush);
+		}
+	}
+	SelectObject(hdc, oldPen);
+	if (pen != nullptr) {
+		DeleteObject(pen);
+	}
+}
+
+// the list stays open, so the editor gets the focus back to continue at the bookmark.
+void BookmarkListActivate(HWND hwndLV) noexcept {
+	const Sci_Line line = BookmarkListSelectedLine(hwndLV);
+	if (line >= 0) {
+		EditGotoBookmarkLine(line);
+		SetActiveWindow(hwndMain);
+		SetFocus(hwndEdit);
+	}
+}
+
+INT_PTR CALLBACK EditBookmarkListDlgProc(HWND hwnd, UINT umsg, WPARAM wParam, LPARAM lParam) noexcept {
+	static const DWORD controlDefinition[] = {
+		DeferCtlMove(IDC_RESIZEGRIP),
+		DeferCtlSize(IDC_BOOKMARKLIST),
+		DeferCtlMoveY(IDC_BOOKMARKLIST_USER),
+		DeferCtlMoveY(IDC_BOOKMARKLIST_OCCURRENCE),
+		DeferCtlMoveY(IDC_BOOKMARKLIST_FIND),
+		DeferCtlMoveY(IDC_BOOKMARKLIST_FINDALL),
+	};
+
+	switch (umsg) {
+	case WM_INITDIALOG: {
+		HWND hwndLV = GetDlgItem(hwnd, IDC_BOOKMARKLIST);
+		InitWindowCommon(hwndLV);
+		ListView_SetExtendedListViewStyle(hwndLV, LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER | LVS_EX_LABELTIP);
+		BookmarkListInitColumns(hwnd, hwndLV);
+		for (int marker = 0; marker < BookmarkKindCount; marker++) {
+			CheckDlgButton(hwnd, IDC_BOOKMARKLIST_USER + marker, BST_CHECKED);
+		}
+
+		ResizeDlg_Init(hwnd, &positionRecord.cxBookmarkListDlg, &positionRecord.cyBookmarkListDlg, controlDefinition, COUNTOF(controlDefinition));
+		BookmarkListFitTextColumn(hwndLV);
+		DarkMode_InitDialog(hwnd, DialogRefData_DefaultPosition);
+		if (positionRecord.xBookmarkListDlg == 0 && positionRecord.yBookmarkListDlg == 0) {
+			CenterDlgInParent(hwnd);
+		} else {
+			SetDlgPos(hwnd, positionRecord.xBookmarkListDlg, positionRecord.yBookmarkListDlg);
+		}
+
+		bookmarkList.docChanged = false;
+		BookmarkListRefresh(hwnd, true);
+		SetTimer(hwnd, BookmarkListTimerId, BookmarkListRefreshPeriod, nullptr);
+	}
+	return TRUE;
+
+	case WM_DESTROY:
+		KillTimer(hwnd, BookmarkListTimerId);
+		GetDlgPos(hwnd, &positionRecord.xBookmarkListDlg, &positionRecord.yBookmarkListDlg);
+		bookmarkList.Release();
+		hDlgBookmarkList = nullptr;
+		UpdateToolbar();
+		return FALSE;
+
+	case WM_SIZE:
+		BookmarkListFitTextColumn(GetDlgItem(hwnd, IDC_BOOKMARKLIST));
+		return FALSE;
+
+	case WM_TIMER:
+		if (wParam == BookmarkListTimerId) {
+			BookmarkListRefresh(hwnd, false);
+		}
+		return TRUE;
+
+	case WM_NOTIFY: {
+		LPNMHDR pnmhdr = AsPointer<LPNMHDR>(lParam);
+		if (pnmhdr->idFrom != IDC_BOOKMARKLIST) {
+			break;
+		}
+		switch (pnmhdr->code) {
+		case LVN_GETDISPINFO: {
+			NMLVDISPINFO *pdi = AsPointer<NMLVDISPINFO *>(lParam);
+			LVITEM &item = pdi->item;
+			if ((item.mask & LVIF_TEXT) && item.iItem < bookmarkList.count) {
+				const Sci_Line line = bookmarkList.entries[item.iItem].line;
+				if (item.iSubItem == BookmarkListColumnLine) {
+					FormatNumber(item.pszText, static_cast<size_t>(line + 1));
+				} else if (item.iSubItem == BookmarkListColumnText) {
+					item.pszText = bookmarkList.LineText(line);
+				} else {
+					item.pszText[0] = L'\0';
+				}
+			}
+		}
+		break;
+
+		case LVN_ITEMCHANGED: {
+			const NMLISTVIEW *pnmlv = AsPointer<NMLISTVIEW *>(lParam);
+			if (!bookmarkList.updatingSelection && (pnmlv->uNewState & LVIS_SELECTED) && !(pnmlv->uOldState & LVIS_SELECTED)
+				&& pnmlv->iItem >= 0 && pnmlv->iItem < bookmarkList.count) {
+				EditGotoBookmarkLine(bookmarkList.entries[pnmlv->iItem].line);
+			}
+		}
+		break;
+
+		case NM_DBLCLK:
+			BookmarkListActivate(pnmhdr->hwndFrom);
+			break;
+
+		case NM_CUSTOMDRAW: {
+			NMLVCUSTOMDRAW *pcd = AsPointer<NMLVCUSTOMDRAW *>(lParam);
+			LRESULT result = CDRF_DODEFAULT;
+			switch (pcd->nmcd.dwDrawStage) {
+			case CDDS_PREPAINT:
+				result = CDRF_NOTIFYITEMDRAW;
+				break;
+			case CDDS_ITEMPREPAINT:
+				result = CDRF_NOTIFYPOSTPAINT;
+				break;
+			case CDDS_ITEMPOSTPAINT:
+				if (static_cast<Sci_Line>(pcd->nmcd.dwItemSpec) < bookmarkList.count) {
+					const int index = static_cast<int>(pcd->nmcd.dwItemSpec);
+					const bool selected = ListView_GetItemState(pnmhdr->hwndFrom, index, LVIS_SELECTED) != 0;
+					BookmarkListDrawKinds(pnmhdr->hwndFrom, pcd->nmcd.hdc, index, selected);
+				}
+				break;
+			}
+			SetWindowLongPtr(hwnd, DWLP_MSGRESULT, result);
+		}
+		return TRUE;
+		}
+	}
+	break;
+
+	case WM_COMMAND:
+		switch (LOWORD(wParam)) {
+		case IDC_BOOKMARKLIST_USER:
+		case IDC_BOOKMARKLIST_OCCURRENCE:
+		case IDC_BOOKMARKLIST_FIND:
+		case IDC_BOOKMARKLIST_FINDALL:
+			BookmarkListRefresh(hwnd, false);
+			break;
+
+		case IDOK:
+			BookmarkListActivate(GetDlgItem(hwnd, IDC_BOOKMARKLIST));
+			break;
+
+		case IDCANCEL:
+			bShowBookmarkList = false;
+			DestroyWindow(hwnd);
+			break;
+		}
+		return TRUE;
+	}
+	return FALSE;
+}
+
+}
+
+HWND EditBookmarkListDlg(HWND hwnd, bool activate) noexcept {
+	HWND hDlg = CreateThemedDialogParam(g_hInstance, MAKEINTRESOURCE(IDD_BOOKMARKLIST), hwnd, EditBookmarkListDlgProc, 0);
+	bShowBookmarkList = true;
+	ShowWindow(hDlg, activate ? SW_SHOW : SW_SHOWNOACTIVATE);
+	if (!activate) {
+		// creating the dialog moved the focus to the list
+		SetFocus(hwndEdit);
+	}
+	return hDlg;
+}
+
+void EditBookmarkListDocChanged() noexcept {
+	bookmarkList.docChanged = true;
+}
+
 static void ShwowReplaceCount(Sci_Position iCount) noexcept {
 	if (iCount > 0) {
 		WCHAR tchNum[32];

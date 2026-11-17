@@ -385,6 +385,7 @@ BEGIN
 			MENUITEM SEPARATOR
 			MENUITEM "Ir para o Pró&ximo\tF2",		BME_EDIT_BOOKMARKNEXT
 			MENUITEM "Ir para o &Anterior\tShift+F2",	BME_EDIT_BOOKMARKPREV
+			MENUITEM "&Bookmark List...\tCtrl+Shift+F2",	BME_EDIT_BOOKMARKLIST
 			MENUITEM SEPARATOR
 			MENUITEM "&Selecionar Tudo\tAlt+F6",		BME_EDIT_BOOKMARKSELECT
 			MENUITEM "&Limpar Tudo\tAlt+F2",			BME_EDIT_BOOKMARKCLEAR
@@ -994,6 +995,7 @@ BEGIN
     VK_F2,          BME_EDIT_BOOKMARKCLEAR,     VIRTKEY, ALT, NOINVERT
     VK_F2,          BME_EDIT_BOOKMARKCLEARAUTO, VIRTKEY, SHIFT, ALT, NOINVERT
     VK_F2,          BME_EDIT_BOOKMARKPREV,      VIRTKEY, SHIFT, NOINVERT
+    VK_F2,          BME_EDIT_BOOKMARKLIST,      VIRTKEY, SHIFT, CONTROL, NOINVERT
     VK_F3,          IDM_EDIT_FINDNEXT,          VIRTKEY, NOINVERT
     VK_F3,          IDM_EDIT_FINDPREV,          VIRTKEY, SHIFT, NOINVERT
     VK_F4,          IDM_EDIT_REPLACENEXT,       VIRTKEY, NOINVERT
@@ -1707,6 +1709,19 @@ BEGIN
     PUSHBUTTON      "Cancel",IDCANCEL,203,49,50,14
 END
 
+IDD_BOOKMARKLIST DIALOGEX 0, 0, 280, 200
+STYLE DS_SETFONT | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME
+CAPTION "Bookmark List"
+FONT 9, "Segoe UI", 400, 0, 0x1
+BEGIN
+    CONTROL         "",IDC_BOOKMARKLIST,"SysListView32",LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_OWNERDATA | WS_BORDER | WS_TABSTOP,7,7,266,168
+    AUTOCHECKBOX    "&Bookmarks",IDC_BOOKMARKLIST_USER,7,181,60,10,WS_TABSTOP
+    AUTOCHECKBOX    "&Occurrences",IDC_BOOKMARKLIST_OCCURRENCE,70,181,64,10,WS_TABSTOP
+    AUTOCHECKBOX    "F&3 Marks",IDC_BOOKMARKLIST_FIND,137,181,56,10,WS_TABSTOP
+    AUTOCHECKBOX    "Find &All Marks",IDC_BOOKMARKLIST_FINDALL,196,181,66,10,WS_TABSTOP
+    SCROLLBAR       IDC_RESIZEGRIP,263,190,10,10,SBS_SIZEGRIP | WS_CLIPSIBLINGS
+END
+
 IDD_CSV_OPTIONS DIALOGEX 0, 0, 220, 118
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Opções do CSV"
@@ -1877,6 +1892,7 @@ BEGIN
     IDT_EDIT_BOOKMARK_CLEAR "Marcadores: Limpar Tudo"
     IDT_EDIT_BOOKMARK_CLEARLINE "Marcadores: Clear Automatic Marks on Line"
     IDT_EDIT_BOOKMARK_CLEARAUTO "Marcadores: Clear All Automatic Marks"
+    IDT_EDIT_BOOKMARK_LIST  "Marcadores: Bookmark List"
 END
 
 STRINGTABLE
@@ -2114,6 +2130,8 @@ O botão ""Visualizar"" não aplicará nenhuma alteração."
 	IDS_WRAP_SYMBOL_BEFORE_OPTIONS	"Sem indicadores visuais antes da quebra|Mostrar indicadores visuais antes da quebra (próximo ao texto)|Mostrar indicadores visuais antes da quebra (próximo às bordas)"
 	IDS_WRAP_SYMBOL_AFTER_OPTIONS	"Sem indicadores visuais após a quebra|Mostrar indicadores visuais após a quebra (próximo ao texto)|Mostrar indicadores visuais após a quebra (próximo às bordas)|Mostrar indicadores visuais após a quebra (na margem do número da linha)"
 	IDS_WRAP_MODE_OPTIONS			"Sem quebra|Quebrar texto entre palavras|Quebrar texto entre quaisquer caracteres|Quebrar texto em espaços em branco|Quebra automática de linha"
+	IDS_BOOKMARKLIST_LINE			"Line"
+	IDS_BOOKMARKLIST_TEXT			"Text"
 END
 
 #if NP2_ENABLE_LOCALIZE_LEXER_NAME

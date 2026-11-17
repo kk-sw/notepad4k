@@ -211,6 +211,11 @@ struct WindowPositionRecord {
 	int cyStyleSelectDlg;
 	int cxStyleCustomizeDlg;
 	int cyStyleCustomizeDlg;
+
+	int xBookmarkListDlg;
+	int yBookmarkListDlg;
+	int cxBookmarkListDlg;
+	int cyBookmarkListDlg;
 };
 
 extern WindowPositionRecord positionRecord;

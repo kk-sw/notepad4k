@@ -467,7 +467,7 @@ enum ANSIArtStyleIndex {
 #define MarkOccurrencesDefaultAlpha	25
 #define SelectionDefaultAlpha		95
 
-#define	BookmarkImageDefaultColor	RGB(0x40, 0x80, 0x40)
+#define	BookmarkImageDefaultColor	RGB(0x24, 0x5F, 0xB4)
 #define	BookmarkLineDefaultColor	RGB(0, 0xff, 0)
 #define BookmarkLineDefaultAlpha	40
 
@@ -3140,10 +3140,18 @@ constexpr AutoBookmarkKind AutoBookmarkKinds[] = {
 
 constexpr int AutoBookmarkLineAlpha = 0x30;
 
-// 4x4 supersampled coverage gives smooth edges at any zoom.
-template <typename Inside>
-void FillBookmarkShape(uint8_t *pixels, int width, int height, COLORREF color, Inside inside) noexcept {
+constexpr COLORREF MixColor(COLORREF from, COLORREF to, double amount) noexcept {
+	const auto mix = [amount](UINT a, UINT b) noexcept {
+		return static_cast<UINT>(a + (static_cast<double>(b) - a)*amount + 0.5);
+	};
+	return RGB(mix(GetRValue(from), GetRValue(to)), mix(GetGValue(from), GetGValue(to)), mix(GetBValue(from), GetBValue(to)));
+}
+
+// 4x4 supersampled coverage gives smooth edges at any zoom; a shape drawn over another blends into it.
+template <typename ColorAt, typename Inside>
+void FillBookmarkShape(uint8_t *pixels, int width, int height, ColorAt colorAt, Inside inside) noexcept {
 	for (int y = 0; y < height; y++) {
+		const COLORREF color = colorAt(y + 0.5);
 		for (int x = 0; x < width; x++) {
 			int coverage = 0;
 			for (int sy = 0; sy < 4; sy++) {
@@ -3153,10 +3161,12 @@ void FillBookmarkShape(uint8_t *pixels, int width, int height, COLORREF color, I
 			}
 			if (coverage != 0) {
 				uint8_t *pixel = pixels + 4*(y*width + x);
-				pixel[0] = GetRValue(color);
-				pixel[1] = GetGValue(color);
-				pixel[2] = GetBValue(color);
-				pixel[3] = static_cast<uint8_t>(coverage*255/16);
+				const int alpha = coverage*255/16;
+				const int keep = (pixel[3] == 0) ? 0 : 255 - alpha;
+				pixel[0] = static_cast<uint8_t>((GetRValue(color)*(255 - keep) + pixel[0]*keep)/255);
+				pixel[1] = static_cast<uint8_t>((GetGValue(color)*(255 - keep) + pixel[1]*keep)/255);
+				pixel[2] = static_cast<uint8_t>((GetBValue(color)*(255 - keep) + pixel[2]*keep)/255);
+				pixel[3] = static_cast<uint8_t>(max<int>(pixel[3], alpha));
 			}
 		}
 	}
@@ -3174,16 +3184,28 @@ void DefineBookmarkImages(COLORREF userColor) noexcept {
 	const double right = width*0.52;
 	const double top = height*0.10;
 	const double bottom = height*0.90;
-	const double middle = (left + right)/2;
 	const double notch = (right - left)*0.55;
-	FillBookmarkShape(pixels, width, height, userColor, [=](double x, double y) noexcept {
-		if (x < left || x > right || y < top || y > bottom) {
-			return false;
-		}
-		// the V cut at the bottom of the ribbon.
-		const double depth = notch*(1.0 - std::abs(x - middle)/(middle - left));
-		return y <= bottom - depth;
-	});
+	const auto ribbon = [=](double inset) noexcept {
+		return [=](double x, double y) noexcept {
+			const double l = left + inset;
+			const double r = right - inset;
+			if (x < l || x > r || y < top + inset || y > bottom - inset) {
+				return false;
+			}
+			// the V cut at the bottom of the ribbon.
+			const double middle = (l + r)/2;
+			const double depth = notch*(1.0 - std::abs(x - middle)/(middle - l));
+			return y <= bottom - inset - depth;
+		};
+	};
+	// a darker outline around a fill that fades from a light tint at the top to the bookmark colour.
+	const COLORREF outlineColor = MixColor(userColor, RGB(0, 0, 0), 0.30);
+	const COLORREF topColor = MixColor(userColor, RGB(0xff, 0xff, 0xff), 0.55);
+	const double outline = max(1.0, width*0.07);
+	FillBookmarkShape(pixels, width, height, [=](double) noexcept { return outlineColor; }, ribbon(0));
+	FillBookmarkShape(pixels, width, height, [=](double y) noexcept {
+		return MixColor(topColor, userColor, clamp((y - top)/(bottom - top), 0.0, 1.0));
+	}, ribbon(outline));
 	SciCall_MarkerDefineRGBAImage(MarkerNumber_Bookmark, pixels);
 
 	const double radius = min(width*0.19, height*0.15);
@@ -3191,7 +3213,7 @@ void DefineBookmarkImages(COLORREF userColor) noexcept {
 	for (const auto &kind : AutoBookmarkKinds) {
 		memset(pixels, 0, size);
 		const double cy = height*(0.20 + 0.30*kind.row);
-		FillBookmarkShape(pixels, width, height, kind.color, [=](double x, double y) noexcept {
+		FillBookmarkShape(pixels, width, height, [&kind](double) noexcept { return kind.color; }, [=](double x, double y) noexcept {
 			return (x - cx)*(x - cx) + (y - cy)*(y - cy) <= radius*radius;
 		});
 		SciCall_MarkerDefineRGBAImage(kind.marker, pixels);
@@ -3216,11 +3238,8 @@ void Style_SetBookmark() noexcept {
 
 	LPCWSTR szValue = lexGlobal.GetStyleValue(GlobalStyleIndex_Bookmark);
 	if (bShowBookmarkMargin) {
-		COLORREF iBookmarkImageColor;
-		if (!Style_StrGetForeColor(szValue, &iBookmarkImageColor)) {
-			iBookmarkImageColor = BookmarkImageDefaultColor;
-		}
-		DefineBookmarkImages(iBookmarkImageColor & 0xffffff);
+		const COLORREF iBookmarkImageColor = Style_GetBookmarkKindColor(MarkerNumber_Bookmark);
+		DefineBookmarkImages(iBookmarkImageColor);
 #if BookmarkUsingPixmapImage
 		sprintf(bookmark_pixmap_color, bookmark_pixmap_color_fmt, iBookmarkImageColor);
 		SciCall_MarkerDefinePixmap(MarkerNumber_Bookmark, bookmark_pixmap);
@@ -3245,6 +3264,19 @@ void Style_SetBookmark() noexcept {
 		}
 	}
 	bBookmarkColorUpdated = false;
+}
+
+COLORREF Style_GetBookmarkKindColor(int marker) noexcept {
+	for (const auto &kind : AutoBookmarkKinds) {
+		if (kind.marker == marker) {
+			return kind.color;
+		}
+	}
+	COLORREF color;
+	if (!Style_StrGetForeColor(lexGlobal.GetStyleValue(GlobalStyleIndex_Bookmark), &color)) {
+		color = BookmarkImageDefaultColor;
+	}
+	return color & 0xffffff;
 }
 
 // the margin images are drawn for the current line height, so redraw them after zooming or a font change.
