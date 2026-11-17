@@ -1,5 +1,6 @@
 # Notepad4 Arch
 Date: 2026-11-09
+Updated: 2026-11-17
 
 ## TL;DR
 - Keyboard input is checked against accelerators first; anything left over goes to Scintilla.
@@ -16,7 +17,10 @@ Date: 2026-11-09
   - `SCN_KEY` handler: nothing in `scintilla/` emits it.
   - `SCN_DOUBLECLICK`: no handler.
   - `scintilla/lexers/LexReST.cxx` and `scintilla/call/ScintillaCall.cxx`: not built by MSVC.
-  - `res/Toolbar*.bmp`: not referenced by any `.rc`.
+  - `res/Toolbar.bmp`, `Toolbar1.bmp`, `Toolbar2.bmp`: not referenced by any `.rc`.
+- The fork's own changes are listed in §4, with their entry points.
+  - Bookmarks: four kinds and a live Bookmark List window (polled 400 ms timer, toggled from menu, toolbar and Ctrl+Shift+F2).
+  - Also: new toolbar buttons with hover shortcut hints, search defaulting to the selection, spell checker, default save location, Notepad4k branding.
 
 
 ---
@@ -76,12 +80,12 @@ How the lexer code is split:
 
 ### 2.0 Shared message loop
 
-Where: `wWinMain` `src/Notepad4.cpp:503`, loop `:664-678`, `DispatchMessageMain` `:450-461`.
+Where: `wWinMain` `src/Notepad4.cpp:731`, loop `:893-907`, `DispatchMessageMain` `:673`.
 
 ```text
 wWinMain():
-    hAccMain        = LoadAccelerators(IDR_MAINWND)          // Notepad4.rc:857
-    hAccFindReplace = LoadAccelerators(IDR_ACCFINDREPLACE)   // Notepad4.rc:1054
+    hAccMain        = LoadAccelerators(IDR_MAINWND)          // Notepad4.rc:870
+    hAccFindReplace = LoadAccelerators(IDR_ACCFINDREPLACE)   // Notepad4.rc:1065
     create main window → WM_CREATE → EditCreate() creates Scintilla child IDC_EDIT
     loop forever:
         if editMarkAll.pending:                     // only idle work: incremental "mark all occurrences"
@@ -97,17 +101,20 @@ DispatchMessageMain(msg):
     if Find/Replace dialog open AND msg targets it or its children:
         if TranslateAccelerator(hDlgFindReplace, hAccFindReplace, msg): return
         if IsDialogMessage(hDlgFindReplace, msg): return
+    if Bookmark List open AND msg targets it or its children:   // [new], §4.2
+        if TranslateAccelerator(hwndMain, hAccBookmarkList, msg): return   // only its toggle key
+        if IsDialogMessage(hDlgBookmarkList, msg): return
     if TranslateAccelerator(hwndMain, hAccMain, msg): return    // → WM_COMMAND
     TranslateMessage(msg)                                       // WM_KEYDOWN → WM_CHAR
     DispatchMessage(msg)                                        // → focused window (Scintilla)
 ```
 
-Focus note: `MainWndProc` `WM_SETFOCUS` forwards focus to `hwndEdit` (`:1247`). Keys go to Scintilla, but accelerators are still tested first against `hwndMain`.
+Focus note: `MainWndProc` `WM_SETFOCUS` forwards focus to `hwndEdit` (`:1500`). Keys go to Scintilla, but accelerators are still tested first against `hwndMain`.
 
 ### 2.1 Keyboard input
 
 Where:
-- `MainWndProc` `src/Notepad4.cpp:1103`, `MsgCommand` `:2655`, `MsgNotify` `:4625`.
+- `MainWndProc` `src/Notepad4.cpp:1337`, `MsgCommand` `:2922`, `MsgNotify` `:4992`.
 - `ScintillaWin::KeyMessage` `scintilla/win32/ScintillaWin.cxx:2057`.
 - `Editor::KeyDownWithModifiers` `scintilla/src/Editor.cxx:4346`, `Editor::InsertCharacter` `:2176`.
 - `ScintillaBase::KeyCommand` `scintilla/src/ScintillaBase.cxx:162`.
@@ -137,7 +144,7 @@ KeyMessage(WM_KEYDOWN):
         DwellEnd()
         cmd = kmap.Find(key, mods)                       // KeyMap.cxx:49, std::map
         if cmd: consumed = true; Editor::WndProc(cmd)    // e.g. SCI_LINEDOWN, SCI_NEWLINE
-        // Notepad4 adds bindings via SciCall_AssignCmdKey (Notepad4.cpp:1746)
+        // Notepad4 adds bindings via SciCall_AssignCmdKey (Notepad4.cpp:2007)
     if !consumed: DefWindowProc
 
 Editor::WndProc(key command) → ScintillaBase::KeyCommand(cmd):
@@ -171,7 +178,7 @@ KeyMessage(WM_CHAR ch):
                 AutoCompleteCharacterAdded
 
 // ── C. Notifications back in Notepad4 (MsgNotify, idFrom == IDC_EDIT) ─
-MsgNotify(SCN_CHARADDED ch):                             // Notepad4.cpp:4712
+MsgNotify(SCN_CHARADDED ch):                             // Notepad4.cpp:5080
     if scn.handled (IME tentative / multi-selection / enclose): return
     if ch is CR/LF and bIndentText:  EditAutoIndent()
     if ch == '>':                    EditAutoCloseXMLTag()
@@ -179,10 +186,10 @@ MsgNotify(SCN_CHARADDED ch):                             // Notepad4.cpp:4712
     else if word char and CompleteWord on:
         EditCompleteWord(AutoCActive ? OnCharAdded : Normal)
 
-MsgNotify(SCN_MODIFIED):                                 // :4845
-    ++dwCurrentDocReversion; UpdateStatusBarCacheLineColumn(); AutoSave_Start()
+MsgNotify(SCN_MODIFIED):                                 // :5213
+    ++dwCurrentDocReversion; EditBookmarkListDocChanged(); UpdateStatusBarCacheLineColumn(); AutoSave_Start()
 
-MsgNotify(SCN_UPDATEUI):                                 // :4634, fired from Scintilla Idle()
+MsgNotify(SCN_UPDATEUI):                                 // :5001, fired from Scintilla Idle()
     EditSpellCheckUpdateUI(updated)                      // [new] text/scroll → 250 ms spell-check timer
     if only scroll changed: return
     UpdateToolbar(); UpdateLineNumberWidth() on line-count change
@@ -204,7 +211,7 @@ WM_IME_ENDCOMPOSITION:   TentativeUndo; show caret
 Where:
 - `ScintillaWin::MouseMessage` `scintilla/win32/ScintillaWin.cxx:1942`.
 - `Editor::ButtonDownWithModifiers` `scintilla/src/Editor.cxx:4964`, `ButtonMoveWithModifiers` `:5224`, `ButtonUpWithModifiers` `:5350`.
-- `MainWndProc` `WM_CONTEXTMENU` `src/Notepad4.cpp:1355`, `MsgDropFiles` `:1033`, `MsgNotify` `:4625`.
+- `MainWndProc` `WM_CONTEXTMENU` `src/Notepad4.cpp:1608`, `MsgDropFiles` `:1267`, `MsgNotify` `:4992`.
 
 ```text
 // ── A. Scintilla window procedure ───────────────────────────────────
@@ -379,9 +386,9 @@ How rows are grouped:
 
 | File | Purpose |
 |---|---|
-| `src/Notepad4.cpp` | `wWinMain`, message loop, `MainWndProc`, `MsgCommand`, `MsgNotify`, toolbar/status bar (~8.2k lines) |
+| `src/Notepad4.cpp` | `wWinMain`, message loop, `MainWndProc`, `MsgCommand`, `MsgNotify`, toolbar/status bar (~8.7k lines) |
 | `src/Notepad4.h` | Main-window globals and declarations |
-| `src/Edit.cpp` | Editing operations: load/save, text transforms, find/replace, bookmarks, open selection (~8k lines) |
+| `src/Edit.cpp` | Editing operations: load/save, text transforms, find/replace, bookmarks and the Bookmark List dialog, open selection (~8.8k lines) |
 | `src/Edit.h` | Editing declarations |
 | `src/EditAutoC.cpp` | Auto-completion, auto-indent, brace/quote/XML-tag auto-close, LaTeX input |
 | `src/EditAutoC_Data0.h` | Static keyword tables for doc comments (Doxygen, C# XML doc, …) |
@@ -573,12 +580,14 @@ How rows are grouped:
 | `tools/starttm.cpp` | Startup-time benchmark |
 | `tools/readme.txt` | Image sourcing and conversion notes |
 | `tools/lang/*` (85) | Keyword/API source lists per language (+ SQL dialects) |
-| `tools/images/**` (67 svg, 354 png) | Source art for toolbar, icons, cursors (+ **[new]** `CodePretty`, `SpellCheck`, `ResetZoom`, `LineComment`, `MarkdownBold`, `MarkdownItalic`, `MarkdownCode`, `About`, `MarkdownLink`, `MarkdownClear`, `BookmarkToggle`, `BookmarkPrev`, `BookmarkNext`, `BookmarkClear`, `AutoMarksClearLine`, `AutoMarksClear`) |
+| `tools/images/**` (68 svg, 359 png) | Source art for toolbar, icons, cursors (+ **[new]** `CodePretty`, `SpellCheck`, `ResetZoom`, `LineComment`, `MarkdownBold`, `MarkdownItalic`, `MarkdownCode`, `About`, `MarkdownLink`, `MarkdownClear`, `BookmarkToggle`, `BookmarkPrev`, `BookmarkNext`, `BookmarkClear`, `AutoMarksClearLine`, `AutoMarksClear`, `BookmarkList`) |
 | `wiki/` (0) | Uninitialized wiki submodule |
 
 ---
 
-## 4. Changes since `3fcfb70f`
+## 4. Fork changes since `3fcfb70f`
+
+User-facing behaviour is described in `readme.md`. This section covers where each change lives.
 
 ### 4.1 Toolbar
 
@@ -586,38 +595,85 @@ How rows are grouped:
 |---|---|---|---|---|---|
 | 28 | 27 `CodePretty` (blue `{` + indented lines) | `IDT_EDIT_CODE_PRETTY` 40627 | button | `EditFormatCode(IDM_EDIT_CODE_PRETTY)` | Document non-empty and scheme has `LexerAttr_CodePretty` (CSS/JS/JSON) |
 | 29 | 28 `SpellCheck` ("abc" + red squiggle) | `IDT_VIEW_SPELLCHECK` 40628 | split (`BTNS_DROPDOWN`) | Button: toggle spell check; ▾: language list | `EditSpellCheckIsUsable()` (Windows 10+, factory not failed); pressed while on |
-| 30 | 29 `ResetZoom` (magnifier with `=`) | `IDT_VIEW_RESETZOOM` 40629 | button | `SciCall_SetZoom(100)` (same as `IDM_VIEW_RESETZOOM`) | Always |
-| 31 | 30 `LineComment` (green `//` + text lines) | `IDT_EDIT_LINECOMMENT` 40630 | button | `EditToggleCommentLine(false)` (same as `IDM_EDIT_LINECOMMENT`) | Scheme supports line comments (no `LexerAttr_NoLineComment`) |
-| 32 | 31 `MarkdownBold` (bold `B`) | `IDT_EDIT_MARKDOWN_BOLD` 40631 | button | `EditEncloseSelection(L"**", L"**")` | `IsMarkdownFormatAvailable()`: an untitled document, or a file with the Markdown scheme. `PrepareMarkdownFormat()` switches an untitled document to Markdown on press |
-| 33 | 32 `MarkdownItalic` (thin Georgia italic `I`) | `IDT_EDIT_MARKDOWN_ITALIC` 40632 | button | `EditEncloseSelection(L"_", L"_")` | Same |
+| 30 | 29 `ResetZoom` (magnifier with `=`) | `IDT_VIEW_RESETZOOM` 40629 | button | `SciCall_SetZoom(100)` (= `IDM_VIEW_RESETZOOM`) | Always |
+| 31 | 30 `LineComment` (green `//` + text lines) | `IDT_EDIT_LINECOMMENT` 40630 | button | `EditToggleCommentLine(false)` (= `IDM_EDIT_LINECOMMENT`) | Scheme supports line comments (no `LexerAttr_NoLineComment`) |
+| 32 | 31 `MarkdownBold` (bold `B`) | `IDT_EDIT_MARKDOWN_BOLD` 40631 | button | `EditEncloseSelection(L"**", L"**")` | `IsMarkdownFormatAvailable()`: untitled document, or Markdown scheme |
+| 33 | 32 `MarkdownItalic` (thin italic `I`) | `IDT_EDIT_MARKDOWN_ITALIC` 40632 | button | `EditEncloseSelection(L"_", L"_")` | Same |
 | 34 | 33 `MarkdownCode` (purple `</>`) | `IDT_EDIT_MARKDOWN_CODE` 40633 | button | ``EditEncloseSelection(L"`", L"`")`` | Same |
-| 35 | 34 `About` (blue info `i`) | `IDT_HELP_ABOUT` 40634 | button | Opens the About dialog (same as Help → About; no keyboard shortcut) | Always |
-| 36 | 35 `MarkdownLink` (blue/grey chain link) | `IDT_EDIT_MARKDOWN_LINK` 40635 | button | `EditEncloseSelection(L"[⇗](", L")")` via `EditMarkdownLinkSelection()`: selection (spaces and line endings trimmed) becomes the link target; does nothing if it spans lines | Same as the other Markdown buttons |
-| 37 | 36 `MarkdownClear` (eraser on a blue line) | `IDT_EDIT_MARKDOWN_CLEAR` 40636 | button | `EditClearMarkdownFormatting()` (`src/Edit.cpp`): expands the selection over enclosing markers, then strips inline and heading/quote Markdown; list/task markers and unpaired markers stay | Same as the other Markdown buttons |
-| 38 | 37 `BookmarkToggle` (green ribbon) | `IDT_EDIT_BOOKMARK_TOGGLE` 40637 | button | `EditToggleBookmarkAt(-1)` (= Ctrl+F2) | Always |
-| 39 | 38 `BookmarkPrev` (ribbon + blue up arrow) | `IDT_EDIT_BOOKMARK_PREV` 40638 | button | previous bookmark of any kind (= Shift+F2) | Always |
-| 40 | 39 `BookmarkNext` (ribbon + blue down arrow) | `IDT_EDIT_BOOKMARK_NEXT` 40639 | button | next bookmark of any kind (= F2) | Always |
-| 41 | 40 `BookmarkClear` (ribbon + red ✕) | `IDT_EDIT_BOOKMARK_CLEAR` 40640 | button | removes all four bookmark kinds (= Alt+F2) | Always |
-| 42 | 41 `AutoMarksClearLine` (3 coloured dots + red minus) | `IDT_EDIT_BOOKMARK_CLEARLINE` 40641 | button | removes the automatic marks from the current line, keeps the user bookmark (= Bookmarks → Clear Automatic Marks on Line, `BME_EDIT_BOOKMARKCLEARLINE` 40259) | Always |
-| 43 | 42 `AutoMarksClear` (3 coloured dots + red ✕) | `IDT_EDIT_BOOKMARK_CLEARAUTO` 40642 | button | `ClearBookmarkKinds(MarkerNumber_OccurrenceMark)`: removes all automatic marks, keeps user bookmarks (= Bookmarks → Clear All Automatic Marks, `BME_EDIT_BOOKMARKCLEARAUTO` 40593) | Always |
+| 35 | 34 `About` (blue info `i`) | `IDT_HELP_ABOUT` 40634 | button | About dialog (no keyboard shortcut) | Always |
+| 36 | 35 `MarkdownLink` (chain link) | `IDT_EDIT_MARKDOWN_LINK` 40635 | button | `EditMarkdownLinkSelection()`: trimmed selection becomes `[⇗](…)`; nothing on a multi-line selection | Same as Bold |
+| 37 | 36 `MarkdownClear` (eraser on a blue line) | `IDT_EDIT_MARKDOWN_CLEAR` 40636 | button | `EditClearMarkdownFormatting()`: expands over enclosing markers, strips inline and heading/quote Markdown | Markdown scheme |
+| 38 | 37 `BookmarkToggle` (blue fading ribbon) | `IDT_EDIT_BOOKMARK_TOGGLE` 40637 | button | `EditToggleBookmarkAt(-1)` (= Ctrl+F2) | Always |
+| 39 | 38 `BookmarkPrev` (ribbon + slate up arrow) | `IDT_EDIT_BOOKMARK_PREV` 40638 | button | previous mark of any kind (= Shift+F2) | Always |
+| 40 | 39 `BookmarkNext` (ribbon + slate down arrow) | `IDT_EDIT_BOOKMARK_NEXT` 40639 | button | next mark of any kind (= F2) | Always |
+| 41 | 40 `BookmarkClear` (ribbon + red ✕) | `IDT_EDIT_BOOKMARK_CLEAR` 40640 | button | `ClearBookmarkKinds(MarkerNumber_Bookmark)`: all four kinds (= Alt+F2) | Always |
+| 42 | 41 `AutoMarksClearLine` (3 dots + red minus) | `IDT_EDIT_BOOKMARK_CLEARLINE` 40641 | button | automatic marks on the current line (= `BME_EDIT_BOOKMARKCLEARLINE` 40259) | Always |
+| 43 | 42 `AutoMarksClear` (3 dots + red ✕) | `IDT_EDIT_BOOKMARK_CLEARAUTO` 40642 | button | `ClearBookmarkKinds(MarkerNumber_OccurrenceMark)` (= Alt+Shift+F2) | Always |
+| 44 | 43 `BookmarkList` (blue fading ribbon + slate lines) | `IDT_EDIT_BOOKMARK_LIST` 40643 | button, pressed while the list is shown | toggles the Bookmark List (= Ctrl+Shift+F2) | Always |
 
-- **Default layout** (`DefaultToolbarButtons`, `src/Notepad4.cpp:71`): `0 1 27 2 0 22 0 4 18 0 10 11 0 38 39 40 41 0 42 43 0 12 0 24 0 13 14 30 0 28 0 31 0 29 0 32 33 34 36 0 37`.
-  - Reset Zoom sits after Zoom In/Out; Pretty, Toggle Line Comment and Spell Check each get their own group, Bold, Italic, Code and Link share a group, and Clear Markdown Formatting comes last in its own group. Browse, Save Copy and About are no longer in the default, and Favorites moved after Open/Save (Customize Toolbar can add the others back).
-- **Markdown buttons:** each one wraps the selection in its marker and keeps the original text selected.
-  - Ctrl+B (`CMD_MARKDOWN_BOLD` 40590) and Ctrl+I (`CMD_MARKDOWN_ITALIC` 40591) do the same in a Markdown document with a selection, and nothing elsewhere. Find Matching Brace and Split Lines no longer have a shortcut.
-  - With no selection, they only switch an untitled document to Markdown.
-  - With a rectangular selection, they show the standard "not supported" notice.
-  - Undo/Redo, Cut/Copy/Paste, Delete, Scheme, Customize Schemes and Exit are no longer in the default; they're still available via Customize Toolbar.
-  - A layout saved in `Notepad4.ini` overrides the default, so on an existing install the new buttons are added via View → Customize Toolbar.
-- **Images:** appended to `res/Toolbar{16,24,32,40,48}.bmp`, with the original 27 images byte-identical.
-  - Sources: `tools/images/<name>.svg` plus `tools/images/<size>x<size>/<name>.png`, listed in `tools/ImageTool.py`.
-  - The bitmaps are rebuilt by `make_all_notepad4_toolbar_bitmap()` in `tools/ImageTool.py`, run from `tools/`. Copy the resulting `Toolbar*.bmp` to `res/`.
+- **Default layout** (`DefaultToolbarButtons`, `src/Notepad4.cpp:73`): `0 1 27 2 0 22 0 4 18 0 10 11 0 38 39 40 44 41 0 42 43 0 12 0 24 0 13 14 30 0 28 0 31 0 29 0 32 33 34 36 0 37`.
+  - Not in the default any more: Browse, Save Copy, Undo/Redo, Cut/Copy/Paste, Delete, Scheme, Customize Schemes, Exit. Customize Toolbar can add them back.
+  - A layout saved in `Notepad4.ini` (`[Settings] ToolbarButtons`) overrides the default, so an existing install adds new buttons through View → Customize Toolbar.
+- **Markdown buttons:** wrap the selection and keep the original text selected.
+  - Ctrl+B (`CMD_MARKDOWN_BOLD` 40590) and Ctrl+I (`CMD_MARKDOWN_ITALIC` 40591) do the same in a Markdown document; Find Matching Brace and Split Lines lost those keys.
+  - With no selection they only switch an untitled document to Markdown (`PrepareMarkdownFormat()`); a rectangular selection shows the "not supported" notice.
+- **State:** `UpdateToolbar()` sets enable/check state.
+  - `Style_SetLexer` calls it after a lexer change, and the Bookmark List calls it when it opens or closes.
+- **Hover hint:** `ShowToolbarButtonHelp()` shows "function ~ shortcut" in `StatusItem_Empty`.
+  - `ToolbarShortcutCommands` maps each `IDT_*` to its menu command; the keys are read from `hAccMain` (`AppendShortcutKeyName()`).
+  - `ID_TOOLBARHELPTIMER` (250 ms) clears the text once the mouse is no longer over a button (`TB_HITTEST`).
+- **Images:** `res/Toolbar{16,24,32,40,48}.bmp`, one image per `tbbMainWnd` entry.
+  - Sources: `tools/images/<name>.svg` plus `tools/images/<size>x<size>/<name>.png`, listed in `make_notepad4_toolbar_bitmap()` in `tools/ImageTool.py`.
+  - Rebuild by running `make_all_notepad4_toolbar_bitmap()` from `tools/`, then copy `Toolbar*.bmp` to `res/`.
+  - The bookmark icons (37–40, 43) use a blue fading ribbon (`#9CCCF8` → `#245FB4`, outline `#1B4A8A`) with slate (`#4A5563`) arrows and lines.
 - **Tooltips:** `STRINGTABLE` entries in all 12 `Notepad4.rc` files, reusing each locale's menu label.
-- **Enable/check state:** set in `UpdateToolbar()` (`src/Notepad4.cpp`). `Style_SetLexer` calls it after a lexer change, so the buttons follow the current scheme.
 
-### 4.2 Spell checker
+### 4.2 Bookmarks
 
-- **New module:** `src/EditSpellCheck.cpp`. It uses the Windows Spell Checking API, is Windows 10+ only, and is gated by `NP2_ENABLE_SPELL_CHECK` and `__has_include(<spellcheck.h>)`.
+- **Four kinds:** `MarkerNumber_Bookmark` (user) 0, `MarkerNumber_OccurrenceMark` 1, `MarkerNumber_FindMark` 2, `MarkerNumber_FindAllMark` 3 (`src/Edit.h`). `MarkerBitmask_AnyBookmark` covers all four.
+  - F2 / Shift+F2, Select All and Clear All use `MarkerBitmask_AnyBookmark`; `ClearBookmarkKinds(first)` clears from `first` to Find All.
+  - F3 marks come from `UpdateFindMark()` (`src/Notepad4.cpp`), gated by `FindReplaceOption_FindAllBookmark`. They reset when the search text changes.
+- **Margin images:** `DefineBookmarkImages()` (`src/Styles.cpp`) builds RGBA images at the current line height; `Style_UpdateBookmarkImages()` rebuilds them after a zoom or font change.
+  - User: a ribbon in the left half, a darker outline around a fill that fades from a light tint to the Bookmark style's `fore` colour (default `#245FB4`).
+  - Automatic kinds: dots on the right (`AutoBookmarkKinds`: orange, blue, purple).
+  - `Style_GetBookmarkKindColor(marker)` returns the colour of a kind, for the margin and the Bookmark List.
+  - Without the margin: a translucent line background per kind.
+- **Jump:** `EditGotoBookmarkLine()` (`src/Edit.cpp`) is shared by F2 / Shift+F2 and the Bookmark List. It sets `editMarkAll.ignoreSelectionUpdate`, so the jump doesn't recompute the occurrence marks.
+
+#### Bookmark List
+
+- **Open and close:** Bookmarks → Bookmark List…, Ctrl+Shift+F2 (`BME_EDIT_BOOKMARKLIST` 40594) or the toolbar button. Each one toggles the list.
+  - The menu item is ticked (`MsgInitMenu`) and the button pressed (`UpdateToolbar`) while `hDlgBookmarkList` is set.
+  - Closing goes through the dialog's `IDCANCEL`; its `WM_DESTROY` clears the handle and calls `UpdateToolbar()`.
+- **Window:** modeless, resizable `IDD_BOOKMARKLIST` (`EditBookmarkListDlg(hwnd, activate)`, `src/Edit.cpp`).
+  - A virtual ListView (`LVS_OWNERDATA`) with three columns: kinds, line, line text (leading whitespace trimmed, at most 512 bytes).
+  - The kinds column is custom-drawn: one symbol per kind in a fixed slot, a ribbon for the user bookmark and dots for the automatic kinds.
+  - Four checkboxes filter the kinds; their IDs follow the marker order (`IDC_BOOKMARKLIST_USER` + marker).
+- **Keys:**
+  - `DispatchMessageMain` translates `hAccBookmarkList` first, then calls `IsDialogMessage`.
+  - `hAccBookmarkList` holds only the toggle key, copied from `hAccMain`, so Ctrl+Shift+F2 also closes the list while it has the focus.
+  - Selection change → preview (focus stays). Enter / double-click → jump, then the editor gets the focus. Esc → close.
+- **Live refresh:** a 400 ms dialog timer walks `MarkerNext`; the list is rebuilt only when a line or kind changed, and the selection follows its line.
+  - `SCN_MODIFIED` calls `EditBookmarkListDocChanged()` so edited line text is repainted.
+  - Polling is used because markers change in many places and the mod event mask is only `INSERTTEXT | DELETETEXT`.
+- **Settings:**
+  - `BookmarkListDlgPosX/PosY` (relative to the main window) and `BookmarkListDlgSizeX/SizeY` (dialog units), in the per-monitor window-position section.
+  - `[Settings] ShowBookmarkList`: set when the list opens, cleared when you close it.
+  - At exit the main `WM_DESTROY` destroys the list without `IDCANCEL`, before `SaveAllSettings()`. So the position is recorded, the shown state survives, and at startup the list reopens without activation (the editor keeps the focus).
+
+### 4.3 Search
+
+- **Search defaults to the selection:** `bSearchDefaultToSelection` (`[Settings] SearchDefaultToSelection`, menu `IDM_SET_SEARCH_DEFAULT_SELECTION` 40592).
+  - Ctrl+F with no selection selects the word at the caret first (`SelectWordAtCaret()`).
+  - F3 / Shift+F3 take the selection or word as a plain-text search: regex, wildcard and backslash transform are turned off.
+- **Find dialog:** `CopySelectionAsFindText()` (`src/Edit.cpp`) fills an already open dialog too.
+- **Removed:** Ctrl+F3 / Ctrl+Shift+F3, and Save Find Text with its Alt+F3 shortcut.
+
+### 4.4 Spell checker
+
+- **Module:** `src/EditSpellCheck.cpp`, using the Windows Spell Checking API (Windows 10+).
+  - Gated by `NP2_ENABLE_SPELL_CHECK` and `__has_include(<spellcheck.h>)`.
+  - camelCase and PascalCase words are skipped.
 - **Hooks into the existing loops:**
 
 ```text
@@ -635,29 +691,28 @@ CleanUpResources  EditSpellCheckReleaseResources (before OleUninitialize)
 - **View menu:** a separator, then "Spell Check" and "Spell Check Language ▸", at the end of the menu.
 - **Settings:** `[Settings] SpellCheck`, `SpellCheckLanguage`.
 
-### 4.3 Default save location
+### 4.5 Saving and branding
 
-- **Menu:** Settings → (separator) → "Default Save Location..." (`IDM_SET_DEFAULT_DIRECTORY` 40499).
-- **Dialog:** `IDD_DEFAULTDIR` (`DefaultDirectoryDlg`, `src/Dialogs.cpp`).
-  - It shows the current value in an edit box and has a "..." button that opens a folder picker.
-  - The picker starts at the resolved path.
-- **Storage:** the existing upstream key `[Settings2] DefaultDirectory`, written immediately.
-  - Environment variables are expanded; a relative path is resolved against the program folder (`ResolveDirectoryPath`).
-  - An empty value deletes the key.
-- **Effect:** `SetupInitialOpenSaveDir` uses it when no file is loaded.
-  - Save and Save As on an untitled document open there.
-  - So does File → Open.
+- **Default save location:** Settings → "Default Save Location..." (`IDM_SET_DEFAULT_DIRECTORY` 40499) opens `IDD_DEFAULTDIR` (`DefaultDirectoryDlg`, `src/Dialogs.cpp`).
+  - Stored in the existing upstream key `[Settings2] DefaultDirectory`, written immediately; an empty value deletes it.
+  - Environment variables are expanded, and a relative path is resolved against the program folder (`ResolveDirectoryPath`).
+  - `SetupInitialOpenSaveDir` uses it when no file is loaded: Save / Save As of an untitled document, and File → Open.
+- **Suggested file name:** `SuggestFileNameFromText()` (`src/Notepad4.cpp`) builds the Save dialog's name from the first 5 words.
+  - It stops at 80 characters and never proposes a reserved device name.
+- **Branding:** `MY_APPNAME_DISPLAY` `L"Notepad4k"` (`src/Version.h`) is used in the window title, message boxes, About, the Help menu and the version info.
 
-### 4.4 Files touched
+### 4.6 Files touched
 
 | File | Change |
 |---|---|
+| `src/Notepad4.cpp` | Toolbar entries, default layout, hover hints; commands, `EditMarkdownLinkSelection`; bookmark kinds and F3 marks; Bookmark List toggle, dispatch, startup and exit; search defaults; suggested file name; spell-check hooks; settings |
+| `src/Edit.cpp`, `src/Edit.h` | Bookmark List dialog, `EditGotoBookmarkLine`, `EditClearMarkdownFormatting`, find-text handling, declarations |
 | `src/EditSpellCheck.cpp` | **New**: spell-check module |
-| `src/Notepad4.cpp` | Toolbar entries, default layout, commands, spell-check hooks, settings |
-| `src/Styles.cpp` | Indicator 11 style; `UpdateToolbar()` and spell-check schedule on lexer change |
+| `src/Styles.cpp`, `src/Styles.h` | Bookmark margin images, `Style_GetBookmarkKindColor`, indicator 11 style; `UpdateToolbar()` and spell-check schedule on lexer change |
+| `src/EditLexers/stlDefault.cpp` | Bookmark style default `fore:#245FB4` |
 | `src/EditAutoC.cpp` | `IsSpellCheckStyle` |
-| `src/Edit.h`, `src/SciCall.h`, `src/config.h`, `src/Notepad4.h` | Declarations, Scintilla wrappers, feature flag, timer ID |
-| `src/resource.h`, `src/Notepad4.rc`, `locale/*/Notepad4.rc` (11) | IDs, View menu items, strings, tooltips |
-| `src/Dialogs.cpp`, `src/Dialogs.h` | `DefaultDirectoryDlg` (default save location) |
+| `src/Dialogs.cpp`, `src/Dialogs.h` | `DefaultDirectoryDlg`, About dialog |
+| `src/Notepad4.h`, `src/SciCall.h`, `src/config.h`, `src/Version.h` | `WindowPositionRecord` fields, timer IDs, Scintilla wrappers, feature flag, app name |
+| `src/resource.h`, `src/Notepad4.rc`, `locale/*/Notepad4.rc` (11) | IDs, menus, accelerators, dialogs (`IDD_DEFAULTDIR`, `IDD_BOOKMARKLIST`), strings, tooltips |
 | `build/VisualStudio/Notepad4.vcxproj(.filters)`, `build/CodeLite/Notepad4.project` | Register `EditSpellCheck.cpp` |
-| `res/Toolbar{16..48}.bmp`, `tools/images/**`, `tools/ImageTool.py` | Nine new toolbar images and their sources |
+| `res/Toolbar{16..48}.bmp`, `res/*.ico`, `tools/images/**`, `tools/ImageTool.py` | Toolbar images and their sources, app icon |
